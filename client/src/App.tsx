@@ -20,6 +20,7 @@ function Shell() {
   const { isActive, identity, connectionError } = useSpacetimeDB();
   const [sessions, sessionsReady] = useTable(tables.session);
   const [games] = useTable(tables.game);
+  const [spectators] = useTable(tables.spectator);
 
   const me = useMemo(
     () => (identity ? sessions.find((s) => s.identity.toHexString() === identity.toHexString()) : undefined),
@@ -67,6 +68,12 @@ function Shell() {
     );
   }
   if (!me || me.accountId === 0n) return <AuthScreen />;
+
+  const mySpec = spectators.find((s) => s.accountId === me.accountId);
+  const specGame = mySpec ? games.find((g) => g.gameId === mySpec.gameId) : undefined;
+  if (specGame) {
+    return <GameScreen key={`spec${specGame.gameId}`} game={specGame} me={me} onExit={() => {}} spectating />;
+  }
   if (currentGame) {
     return (
       <GameScreen

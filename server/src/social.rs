@@ -266,14 +266,6 @@ pub fn clear_challenges_for(ctx: &ReducerContext, account_id: u64) {
     }
 }
 
-pub fn clear_spectators_for_game(ctx: &ReducerContext, game_id: u64) {
-    let specs: Vec<Spectator> = ctx.db.spectator().game_id().filter(game_id).collect();
-    for sp in specs {
-        set_session_status(ctx, sp.account_id, 0);
-        ctx.db.spectator().id().delete(sp.id);
-    }
-}
-
 #[cfg(test)]
 mod tests {
     // clean_text is the only pure logic here; it is exercised indirectly and

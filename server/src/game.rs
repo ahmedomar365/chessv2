@@ -113,7 +113,8 @@ fn finish_game(ctx: &ReducerContext, game_id: u64, result: u8, reason: u8) {
         for id in gems {
             ctx.db.game_gems().id().delete(id);
         }
-        crate::social::clear_spectators_for_game(ctx, game_id);
+        // spectators intentionally stay: they see the result screen and
+        // leave via stop_spectating (or disconnect cleanup).
     }
 }
 

@@ -703,6 +703,88 @@ body::before {
   100% { opacity: 0; transform: scale(1.5); transform-origin: center; transform-box: fill-box; }
 }
 
+/* ---------- chat & social ---------- */
+
+.chat-panel { display: flex; flex-direction: column; gap: 8px; }
+.chat-list {
+  max-height: 260px;
+  min-height: 120px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 2px;
+}
+.chat-compact .chat-list { max-height: 180px; min-height: 80px; }
+.chat-empty { color: var(--faint); font-size: 13px; text-align: center; padding: 24px 0; }
+.chat-msg { font-size: 13.5px; line-height: 1.45; word-break: break-word; }
+.chat-user { color: var(--teal); font-weight: 700; margin-right: 7px; }
+.chat-mine .chat-user { color: var(--gold); }
+.chat-text { color: var(--text); }
+.chat-error { color: var(--ember); font-size: 12px; }
+.chat-input-row { display: flex; gap: 8px; }
+.chat-input-row input {
+  flex: 1;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--bg-deep);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 9px 12px;
+  outline: none;
+}
+.chat-input-row input:focus { border-color: var(--gold); }
+
+.chat-drawer {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 0;
+  width: 100%;
+  max-width: 640px;
+  background: var(--raise);
+  border: 1px solid var(--line);
+  border-bottom: none;
+  border-radius: 16px 16px 0 0;
+  padding: 12px 14px calc(12px + env(safe-area-inset-bottom));
+  z-index: 40;
+  box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.6);
+  animation: drawerup 0.25s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+@keyframes drawerup {
+  from { transform: translate(-50%, 30%); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+
+.challenge-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: rgba(232, 163, 61, 0.1);
+  border: 1px solid var(--gold-deep);
+  border-radius: var(--r-lg);
+  padding: 12px 14px;
+  font-size: 14px;
+  animation: rise 0.3s ease both;
+}
+.challenge-actions { display: inline-flex; gap: 8px; }
+
+.play-sub { margin-top: 12px; }
+.vs-dim { color: var(--faint); font-style: normal; font-size: 12px; }
+.spec-count { color: var(--teal); font-size: 12px; margin-left: 8px; }
+.player-side { display: inline-flex; align-items: center; gap: 8px; }
+.spec-gem-row { display: inline-flex; gap: 14px; }
+.spec-gem { font-size: 13px; font-weight: 700; color: var(--gold-bright); }
+.toast-fixed {
+  position: fixed;
+  bottom: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+}
+
 /* result modal */
 
 .modal-veil {

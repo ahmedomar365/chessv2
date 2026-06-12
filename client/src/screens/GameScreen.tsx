@@ -6,27 +6,34 @@ import BoardSvg, { type Flash } from '../game/BoardSvg';
 import { CardHand, GemMeter } from '../game/CardHand';
 import { CARDS, gemsNow } from '../game/cardsMeta';
 import { legalTargets, type LPiece } from '../game/legal';
+import ChatPanel from '../components/ChatPanel';
 
 export default function GameScreen({
   game,
   me,
   onExit,
+  spectating = false,
 }: {
   game: Game;
   me: Session;
   onExit: () => void;
+  spectating?: boolean;
 }) {
   const movePiece = useReducer(reducers.movePiece);
   const playCard = useReducer(reducers.playCard);
   const resign = useReducer(reducers.resign);
   const offerDraw = useReducer(reducers.offerDraw);
+  const stopSpectating = useReducer(reducers.stopSpectating);
+  const [allSpectators] = useTable(tables.spectator);
+  const specCount = allSpectators.filter((s) => s.gameId === game.gameId).length;
+  const [chatOpen, setChatOpen] = useState(false);
 
   const [pieces] = useTable(tables.piece.where((r) => r.gameId.eq(game.gameId)));
   const [moves] = useTable(tables.move_log.where((r) => r.gameId.eq(game.gameId)));
   const [gemRows] = useTable(tables.game_gems.where((r) => r.gameId.eq(game.gameId)));
   const [cardRows] = useTable(tables.my_card_state);
 
-  const amWhite = game.whiteId === me.accountId;
+  const amWhite = spectating ? true : game.whiteId === me.accountId;
   const myColor = amWhite ? 0 : 1;
 
   // ---- server clock offset (refined from each move's server timestamp) ----
@@ -206,7 +213,7 @@ export default function GameScreen({
   }, [moves]);
 
   const onSquare = (sq: number) => {
-    if (game.phase !== 1) return;
+    if (spectating || game.phase !== 1) return;
 
     // armed card targeting takes priority over movement
     if (armed !== null && armedCard) {
@@ -274,31 +281,51 @@ export default function GameScreen({
     <div className="game-stage">
       <header className="game-bar">
         <span className="bar-name">
-          {opponentName}
-          {oppMated && <span className="badge badge-gold">MATED</span>}
-          <span className="opp-gems">◆ {oppGemCount}</span>
+          {spectating ? (
+            <>
+              {game.whiteName} <em className="vs-dim">vs</em> {game.blackName}
+            </>
+          ) : (
+            <>
+              {opponentName}
+              {oppMated && <span className="badge badge-gold">MATED</span>}
+              <span className="opp-gems">◆ {oppGemCount}</span>
+            </>
+          )}
+          {specCount > 0 && <span className="spec-count">👁 {specCount}</span>}
         </span>
         <span className="bar-actions">
-          <button
-            className={`btn btn-ghost btn-sm ${oppOfferedDraw ? 'btn-attn' : ''} ${iOfferedDraw ? 'btn-active' : ''}`}
-            onClick={() => offerDraw({ gameId: game.gameId }).catch(() => {})}
-          >
-            {oppOfferedDraw ? 'Accept draw' : iOfferedDraw ? 'Draw offered' : 'Draw'}
+          <button className={`btn btn-ghost btn-sm ${chatOpen ? 'btn-active' : ''}`} onClick={() => setChatOpen((v) => !v)}>
+            💬
           </button>
-          {confirmResign ? (
-            <button className="btn btn-sm btn-danger" onClick={() => resign({ gameId: game.gameId }).catch(() => {})}>
-              Confirm
+          {spectating ? (
+            <button className="btn btn-ghost btn-sm" onClick={() => stopSpectating().catch(() => {})}>
+              Stop watching
             </button>
           ) : (
-            <button
-              className="btn btn-ghost btn-sm"
-              onClick={() => {
-                setConfirmResign(true);
-                setTimeout(() => setConfirmResign(false), 3000);
-              }}
-            >
-              Resign
-            </button>
+            <>
+              <button
+                className={`btn btn-ghost btn-sm ${oppOfferedDraw ? 'btn-attn' : ''} ${iOfferedDraw ? 'btn-active' : ''}`}
+                onClick={() => offerDraw({ gameId: game.gameId }).catch(() => {})}
+              >
+                {oppOfferedDraw ? 'Accept draw' : iOfferedDraw ? 'Draw offered' : 'Draw'}
+              </button>
+              {confirmResign ? (
+                <button className="btn btn-sm btn-danger" onClick={() => resign({ gameId: game.gameId }).catch(() => {})}>
+                  Confirm
+                </button>
+              ) : (
+                <button
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => {
+                    setConfirmResign(true);
+                    setTimeout(() => setConfirmResign(false), 3000);
+                  }}
+                >
+                  Resign
+                </button>
+              )}
+            </>
           )}
         </span>
       </header>
@@ -337,25 +364,73 @@ export default function GameScreen({
         {toast && <div className="toast">{toast}</div>}
       </div>
 
-      <footer className="game-foot">
-        <div className="foot-row">
-          <span className="bar-name">
-            {me.username}
-            <span className="badge badge-dim">{amWhite ? 'white' : 'black'}</span>
-          </span>
-          {myGems && (
-            <GemMeter base={myGems.base} anchorMs={Number(myGems.anchor.toMillis())} serverNow={serverNow} />
-          )}
-        </div>
-        <CardHand
-          hand={hand}
-          gems={myGems ? gemsNow(myGems.base, Number(myGems.anchor.toMillis()), serverNow()) : 0}
-          armedIndex={armed}
-          onArm={onArm}
-        />
-      </footer>
+      {spectating ? (
+        <footer className="game-foot">
+          <div className="foot-row">
+            <span className="bar-name">spectating</span>
+            <span className="spec-gem-row">
+              <span className="spec-gem">⬜ ◆ {gemsFor(gemRows, game.whiteId, serverNow)}</span>
+              <span className="spec-gem">⬛ ◆ {gemsFor(gemRows, game.blackId, serverNow)}</span>
+            </span>
+          </div>
+        </footer>
+      ) : (
+        <footer className="game-foot">
+          <div className="foot-row">
+            <span className="bar-name">
+              {me.username}
+              <span className="badge badge-dim">{amWhite ? 'white' : 'black'}</span>
+            </span>
+            {myGems && (
+              <GemMeter base={myGems.base} anchorMs={Number(myGems.anchor.toMillis())} serverNow={serverNow} />
+            )}
+          </div>
+          <CardHand
+            hand={hand}
+            gems={myGems ? gemsNow(myGems.base, Number(myGems.anchor.toMillis()), serverNow()) : 0}
+            armedIndex={armed}
+            onArm={onArm}
+          />
+        </footer>
+      )}
 
-      {finished && <ResultModal game={game} amWhite={amWhite} onExit={onExit} />}
+      {chatOpen && (
+        <div className="chat-drawer">
+          <ChatPanel channel={spectating ? 2 : 1} gameId={game.gameId} myAccountId={me.accountId} compact />
+        </div>
+      )}
+
+      {finished &&
+        (spectating ? (
+          <ResultModalSpec game={game} onExit={() => stopSpectating().catch(() => {})} />
+        ) : (
+          <ResultModal game={game} amWhite={amWhite} onExit={onExit} />
+        ))}
+    </div>
+  );
+}
+
+function gemsFor(
+  rows: readonly { accountId: bigint; base: number; anchor: { toMillis(): bigint } }[],
+  accountId: bigint,
+  serverNow: () => number,
+): number {
+  const r = rows.find((g) => g.accountId === accountId);
+  return r ? gemsNow(r.base, Number(r.anchor.toMillis()), serverNow()) : 0;
+}
+
+function ResultModalSpec({ game, onExit }: { game: Game; onExit: () => void }) {
+  const winner = game.result === 1 ? game.whiteName : game.result === 2 ? game.blackName : null;
+  const reason = ['', 'king captured', 'resignation', 'abandonment', 'agreement'][game.resultReason] ?? '';
+  return (
+    <div className="modal-veil">
+      <div className="result-card is-draw">
+        <div className="result-title">{winner ? `${winner} WINS` : 'DRAW'}</div>
+        <div className="result-sub">{reason}</div>
+        <button className="btn btn-gold" onClick={onExit}>
+          Back to lobby
+        </button>
+      </div>
     </div>
   );
 }
