@@ -1,0 +1,22 @@
+# Secrets — NEVER commit credentials (PayPal keys, SSH keys, tokens)
+.secrets
+*.secret
+*.pem
+*.key
+.env
+.env.*
+!.env.example
+
+# Dependencies & build output
+node_modules/
+dist/
+build/
+.cache/
+target/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
