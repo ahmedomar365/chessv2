@@ -4,7 +4,17 @@ import { reducers, tables } from '../module_bindings';
 import type { Game, Session } from '../module_bindings/types';
 import ChatPanel from '../components/ChatPanel';
 
-export default function Lobby({ me, sessions, games }: { me: Session; sessions: readonly Session[]; games: readonly Game[] }) {
+export default function Lobby({
+  me,
+  sessions,
+  games,
+  onOpenProfile,
+}: {
+  me: Session;
+  sessions: readonly Session[];
+  games: readonly Game[];
+  onOpenProfile: (accountId: bigint) => void;
+}) {
   const joinQueue = useReducer(reducers.joinQueue);
   const leaveQueue = useReducer(reducers.leaveQueue);
   const logout = useReducer(reducers.logout);
@@ -16,6 +26,7 @@ export default function Lobby({ me, sessions, games }: { me: Session; sessions: 
   const [queue] = useTable(tables.queue_entry);
   const [challenges] = useTable(tables.challenge);
   const [spectators] = useTable(tables.spectator);
+  const [profiles] = useTable(tables.player_profile);
   const [toast, setToast] = useState<string | null>(null);
   const say = (m: string) => {
     setToast(m);
@@ -48,7 +59,10 @@ export default function Lobby({ me, sessions, games }: { me: Session; sessions: 
           CHESS<em>V2</em>
         </div>
         <div className="lobby-id">
-          <span className="lobby-user">{me.username}</span>
+          <button className="lobby-user as-link" onClick={() => onOpenProfile(me.accountId)}>
+            {me.username}
+            <span className="lobby-rating">{profiles.find((p) => p.accountId === me.accountId)?.rating ?? 1200}</span>
+          </button>
           <button className="btn btn-ghost btn-sm" onClick={() => logout()}>
             Log out
           </button>
@@ -142,10 +156,11 @@ export default function Lobby({ me, sessions, games }: { me: Session; sessions: 
         <ul className="player-list">
           {players.map((p) => (
             <li key={p.accountId.toString()} className="player-row">
-              <span className="player-name">
+              <button className="player-name as-link" onClick={() => onOpenProfile(p.accountId)}>
                 {p.username}
+                <span className="lobby-rating">{profiles.find((pr) => pr.accountId === p.accountId)?.rating ?? ''}</span>
                 {p.accountId === me.accountId && <span className="you-chip">you</span>}
-              </span>
+              </button>
               <span className="player-side">
                 <span className={`status-chip s${p.status}`}>
                   {p.status === 1 ? 'in game' : p.status === 2 ? 'watching' : 'lobby'}
@@ -161,6 +176,25 @@ export default function Lobby({ me, sessions, games }: { me: Session; sessions: 
               </span>
             </li>
           ))}
+        </ul>
+      </section>
+
+      <section className="panel">
+        <h2 className="panel-title">Leaderboard</h2>
+        <ul className="player-list">
+          {[...profiles]
+            .sort((a, b) => b.rating - a.rating)
+            .slice(0, 100)
+            .map((p, i) => (
+              <li key={p.accountId.toString()} className="player-row">
+                <button className="player-name as-link" onClick={() => onOpenProfile(p.accountId)}>
+                  <span className={`rank-num ${i < 3 ? 'rank-top' : ''}`}>#{i + 1}</span>
+                  {p.username}
+                  {p.accountId === me.accountId && <span className="you-chip">you</span>}
+                </button>
+                <span className="lb-rating">{p.rating}</span>
+              </li>
+            ))}
         </ul>
       </section>
 

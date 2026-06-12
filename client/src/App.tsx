@@ -5,8 +5,15 @@ import { connectionBuilder } from './stdb';
 import AuthScreen from './screens/AuthScreen';
 import Lobby from './screens/Lobby';
 import GameScreen from './screens/GameScreen';
+import ProfileScreen from './screens/ProfileScreen';
+import ReplayScreen from './screens/ReplayScreen';
 
 const builder = connectionBuilder();
+
+type Route =
+  | { kind: 'lobby' }
+  | { kind: 'profile'; accountId: bigint }
+  | { kind: 'replay'; gameId: bigint; fromProfile?: bigint };
 
 export default function App() {
   return (
@@ -31,6 +38,8 @@ function Shell() {
     if (!me || me.accountId === 0n) return undefined;
     return games.find((g) => g.phase < 2 && (g.whiteId === me.accountId || g.blackId === me.accountId));
   }, [games, me]);
+
+  const [route, setRoute] = useState<Route>({ kind: 'lobby' });
 
   // Sticky game routing: stay on the game screen after it finishes so the
   // result modal can be shown; "Back to lobby" clears it.
@@ -84,5 +93,33 @@ function Shell() {
       />
     );
   }
-  return <Lobby me={me} sessions={sessions} games={games} />;
+  if (route.kind === 'replay') {
+    return (
+      <ReplayScreen
+        key={route.gameId.toString()}
+        gameId={route.gameId}
+        onBack={() =>
+          setRoute(route.fromProfile !== undefined ? { kind: 'profile', accountId: route.fromProfile } : { kind: 'lobby' })
+        }
+      />
+    );
+  }
+  if (route.kind === 'profile') {
+    return (
+      <ProfileScreen
+        key={route.accountId.toString()}
+        accountId={route.accountId}
+        onBack={() => setRoute({ kind: 'lobby' })}
+        onReplay={(gameId) => setRoute({ kind: 'replay', gameId, fromProfile: route.accountId })}
+      />
+    );
+  }
+  return (
+    <Lobby
+      me={me}
+      sessions={sessions}
+      games={games}
+      onOpenProfile={(accountId) => setRoute({ kind: 'profile', accountId })}
+    />
+  );
 }

@@ -785,6 +785,78 @@ body::before {
   z-index: 60;
 }
 
+/* ---------- profiles, leaderboard, replays ---------- */
+
+.as-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.as-link:hover { color: var(--gold-bright); }
+.lobby-rating { color: var(--gold); font-size: 12px; font-weight: 700; }
+.rank-num { color: var(--faint); font-size: 12px; min-width: 30px; }
+.rank-top { color: var(--gold-bright); }
+.lb-rating { font-weight: 700; color: var(--gold); font-size: 14px; }
+
+.profile-hero { text-align: center; display: grid; gap: 10px; padding: 22px 16px; }
+.profile-name { font-family: var(--font-display); font-weight: 800; font-size: 24px; }
+.profile-rating { display: flex; align-items: baseline; justify-content: center; gap: 12px; }
+.rating-big {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 44px;
+  color: var(--gold-bright);
+  text-shadow: 0 0 36px rgba(232, 163, 61, 0.4);
+}
+.rating-peak { color: var(--dim); font-size: 13px; }
+.sparkline { width: 100%; height: 60px; }
+.spark-empty { color: var(--faint); font-size: 12.5px; padding: 12px 0; }
+.profile-stats {
+  display: flex;
+  justify-content: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  color: var(--dim);
+  font-size: 13.5px;
+}
+.profile-stats strong { color: var(--text); }
+.streak-chip { color: var(--gold-bright); }
+
+.result-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.dot-win { background: #57d163; }
+.dot-loss { background: var(--ember); }
+.dot-draw { background: var(--dim); }
+
+.replay-controls { align-items: center; }
+.replay-step { color: var(--dim); font-size: 13px; min-width: 56px; }
+.judge-summary { color: var(--dim); font-size: 13px; }
+.judge-summary strong { color: var(--gold-bright); }
+
+.grade-chip {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(7, 8, 13, 0.92);
+  border: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 99px;
+  pointer-events: none;
+}
+.grade-brilliant { color: #6fe3ff; border-color: #2a7d96; }
+.grade-good { color: #57d163; border-color: #2c6b33; }
+.grade-solid { color: var(--dim); }
+.grade-inaccuracy { color: var(--gold-bright); border-color: var(--gold-deep); }
+.grade-blunder { color: var(--ember); border-color: #8a2c20; }
+
 /* result modal */
 
 .modal-veil {

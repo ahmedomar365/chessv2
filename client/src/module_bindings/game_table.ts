@@ -26,4 +26,5 @@ export default __t.row({
   blackMated: __t.bool().name("black_mated"),
   whiteDrawOffer: __t.bool().name("white_draw_offer"),
   blackDrawOffer: __t.bool().name("black_draw_offer"),
+  rated: __t.bool(),
 });

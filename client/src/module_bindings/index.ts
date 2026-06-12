@@ -61,7 +61,9 @@ import GameGemsRow from "./game_gems_table";
 import MoveLogRow from "./move_log_table";
 import MyCardStateRow from "./my_card_state_table";
 import PieceRow from "./piece_table";
+import PlayerProfileRow from "./player_profile_table";
 import QueueEntryRow from "./queue_entry_table";
+import RatingHistoryRow from "./rating_history_table";
 import SessionRow from "./session_table";
 import SpectatorRow from "./spectator_table";
 
@@ -176,6 +178,17 @@ const tablesSchema = __schema({
       { name: 'piece_piece_id_key', constraint: 'unique', columns: ['pieceId'] },
     ],
   }, PieceRow),
+  player_profile: __table({
+    name: 'player_profile',
+    indexes: [
+      { accessor: 'account_id', name: 'player_profile_account_id_idx_btree', algorithm: 'btree', columns: [
+        'accountId',
+      ] },
+    ],
+    constraints: [
+      { name: 'player_profile_account_id_key', constraint: 'unique', columns: ['accountId'] },
+    ],
+  }, PlayerProfileRow),
   queue_entry: __table({
     name: 'queue_entry',
     indexes: [
@@ -187,6 +200,20 @@ const tablesSchema = __schema({
       { name: 'queue_entry_account_id_key', constraint: 'unique', columns: ['accountId'] },
     ],
   }, QueueEntryRow),
+  rating_history: __table({
+    name: 'rating_history',
+    indexes: [
+      { accessor: 'account_id', name: 'rating_history_account_id_idx_btree', algorithm: 'btree', columns: [
+        'accountId',
+      ] },
+      { accessor: 'id', name: 'rating_history_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'rating_history_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, RatingHistoryRow),
   session: __table({
     name: 'session',
     indexes: [

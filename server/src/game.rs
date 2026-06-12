@@ -93,7 +93,11 @@ fn finish_game(ctx: &ReducerContext, game_id: u64, result: u8, reason: u8) {
         g.result = result;
         g.result_reason = reason;
         let (w, b) = (g.white_id, g.black_id);
+        let rated = g.rated;
         ctx.db.game().game_id().update(g);
+        if rated && result != 0 {
+            apply_elo(ctx, w, b, result);
+        }
         set_status_for_account(ctx, w, 0);
         set_status_for_account(ctx, b, 0);
         let timers: Vec<ForfeitTimer> = ctx.db.forfeit_timer().game_id().filter(game_id).collect();
@@ -116,6 +120,52 @@ fn finish_game(ctx: &ReducerContext, game_id: u64, result: u8, reason: u8) {
         // spectators intentionally stay: they see the result screen and
         // leave via stop_spectating (or disconnect cleanup).
     }
+}
+
+/// Apply ELO + stats to both players after a rated game. result: 1 white, 2 black, 3 draw.
+fn apply_elo(ctx: &ReducerContext, white_id: u64, black_id: u64, result: u8) {
+    let (Some(mut wp), Some(mut bp)) = (
+        ctx.db.player_profile().account_id().find(white_id),
+        ctx.db.player_profile().account_id().find(black_id),
+    ) else {
+        return;
+    };
+    let score_white = match result {
+        1 => 1.0,
+        2 => 0.0,
+        _ => 0.5,
+    };
+    let (nw, nb) = crate::elo::update(wp.rating, wp.games, bp.rating, bp.games, score_white);
+    wp.rating = nw;
+    bp.rating = nb;
+    wp.games += 1;
+    bp.games += 1;
+    match result {
+        1 => {
+            wp.wins += 1;
+            wp.streak += 1;
+            bp.losses += 1;
+            bp.streak = 0;
+        }
+        2 => {
+            bp.wins += 1;
+            bp.streak += 1;
+            wp.losses += 1;
+            wp.streak = 0;
+        }
+        _ => {
+            wp.draws += 1;
+            bp.draws += 1;
+            wp.streak = 0;
+            bp.streak = 0;
+        }
+    }
+    wp.peak = wp.peak.max(nw);
+    bp.peak = bp.peak.max(nb);
+    ctx.db.player_profile().account_id().update(wp);
+    ctx.db.player_profile().account_id().update(bp);
+    ctx.db.rating_history().insert(RatingHistory { id: 0, account_id: white_id, ts: ctx.timestamp, rating: nw });
+    ctx.db.rating_history().insert(RatingHistory { id: 0, account_id: black_id, ts: ctx.timestamp, rating: nb });
 }
 
 /// Persist the current board (positions + has_moved) for Rewind.
@@ -203,6 +253,7 @@ fn start_game(ctx: &ReducerContext, white_id: u64, white_name: &str, black_id: u
         black_mated: false,
         white_draw_offer: false,
         black_draw_offer: false,
+        rated: true,
     });
     let ready_at = ctx.timestamp + TimeDuration::from_micros(START_COUNTDOWN_MICROS);
     for p in rules::Board::starting().pieces {
@@ -259,10 +310,14 @@ pub fn join_queue(ctx: &ReducerContext) -> Result<(), String> {
     if ctx.db.queue_entry().account_id().find(s.account_id).is_some() {
         return Ok(()); // idempotent
     }
-    // FIFO: pair with the earliest waiting opponent
+    // Pair with the nearest-rated waiting opponent.
+    let my_rating = ctx.db.player_profile().account_id().find(s.account_id).map(|p| p.rating).unwrap_or(1200);
     let opponent = ctx.db.queue_entry().iter()
         .filter(|q| q.account_id != s.account_id)
-        .min_by_key(|q| q.queued_at);
+        .min_by_key(|q| {
+            let r = ctx.db.player_profile().account_id().find(q.account_id).map(|p| p.rating).unwrap_or(1200);
+            (my_rating - r).abs()
+        });
     match opponent {
         Some(op) => {
             ctx.db.queue_entry().account_id().delete(op.account_id);

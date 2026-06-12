@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod cards;
+pub mod elo;
 pub mod rules;
 
 #[cfg(target_arch = "wasm32")]

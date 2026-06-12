@@ -99,6 +99,7 @@ export const Game = __t.object("Game", {
   blackMated: __t.bool(),
   whiteDrawOffer: __t.bool(),
   blackDrawOffer: __t.bool(),
+  rated: __t.bool(),
 });
 export type Game = __Infer<typeof Game>;
 
@@ -153,12 +154,33 @@ export const Piece = __t.object("Piece", {
 });
 export type Piece = __Infer<typeof Piece>;
 
+export const PlayerProfile = __t.object("PlayerProfile", {
+  accountId: __t.u64(),
+  username: __t.string(),
+  rating: __t.i32(),
+  games: __t.u32(),
+  wins: __t.u32(),
+  losses: __t.u32(),
+  draws: __t.u32(),
+  streak: __t.u32(),
+  peak: __t.i32(),
+});
+export type PlayerProfile = __Infer<typeof PlayerProfile>;
+
 export const QueueEntry = __t.object("QueueEntry", {
   accountId: __t.u64(),
   username: __t.string(),
   queuedAt: __t.timestamp(),
 });
 export type QueueEntry = __Infer<typeof QueueEntry>;
+
+export const RatingHistory = __t.object("RatingHistory", {
+  id: __t.u64(),
+  accountId: __t.u64(),
+  ts: __t.timestamp(),
+  rating: __t.i32(),
+});
+export type RatingHistory = __Infer<typeof RatingHistory>;
 
 export const Session = __t.object("Session", {
   identity: __t.identity(),

@@ -129,4 +129,14 @@ test('full two-player game flow', async ({ browser }, testInfo) => {
   // back to lobby
   await pageB.getByRole('button', { name: 'Back to lobby' }).click();
   await expect(pageB.getByRole('button', { name: 'PLAY' })).toBeVisible({ timeout: 10_000 });
+
+  // --- ranked: winner's profile shows the ELO gain (1200 + 16 provisional K)
+  await pageB.locator('.lobby-user').click();
+  await expect(pageB.locator('.rating-big')).toHaveText('1216', { timeout: 10_000 });
+  await expect(pageB.locator('.result-dot.dot-win')).toBeVisible();
+
+  // --- replay with judge report opens from match history
+  await pageB.getByRole('button', { name: '▶ Replay' }).first().click();
+  await expect(pageB.locator('.board')).toBeVisible({ timeout: 10_000 });
+  await expect(pageB.locator('.judge-summary')).toContainText('accuracy');
 });

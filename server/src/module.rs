@@ -62,6 +62,7 @@ pub struct Game {
     pub black_mated: bool,
     pub white_draw_offer: bool,
     pub black_draw_offer: bool,
+    pub rated: bool,
 }
 
 #[table(accessor = piece, public)]
@@ -106,6 +107,34 @@ pub struct QueueEntry {
     pub account_id: u64,
     pub username: String,
     pub queued_at: Timestamp,
+}
+
+/// Public player stats & rating — created at registration.
+#[table(accessor = player_profile, public)]
+pub struct PlayerProfile {
+    #[primary_key]
+    pub account_id: u64,
+    pub username: String,
+    pub rating: i32,
+    pub games: u32,
+    pub wins: u32,
+    pub losses: u32,
+    pub draws: u32,
+    /// current win streak
+    pub streak: u32,
+    pub peak: i32,
+}
+
+/// Rating after each rated game — powers profile graphs.
+#[table(accessor = rating_history, public)]
+pub struct RatingHistory {
+    #[primary_key]
+    #[auto_inc]
+    pub id: u64,
+    #[index(btree)]
+    pub account_id: u64,
+    pub ts: Timestamp,
+    pub rating: i32,
 }
 
 /// Time-gem balance per player per game — public (gem counts are visible tension).
@@ -326,6 +355,17 @@ pub fn register(ctx: &ReducerContext, username: String, password: String) -> Res
         username: username.clone(),
         pass_hash: auth::hash_password(&password, &salt),
         created_at: ctx.timestamp,
+    });
+    ctx.db.player_profile().insert(PlayerProfile {
+        account_id: acc.account_id,
+        username: username.clone(),
+        rating: 1200,
+        games: 0,
+        wins: 0,
+        losses: 0,
+        draws: 0,
+        streak: 0,
+        peak: 1200,
     });
     bind_session(ctx, acc.account_id, &username);
     Ok(())
