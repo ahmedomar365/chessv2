@@ -1,5 +1,5 @@
 import { SpacetimeDBProvider, useSpacetimeDB, useTable } from 'spacetimedb/react';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { tables } from './module_bindings';
 import { connectionBuilder } from './stdb';
 import AuthScreen from './screens/AuthScreen';
@@ -26,10 +26,28 @@ function Shell() {
     [sessions, identity],
   );
 
-  const myGame = useMemo(() => {
+  const myLiveGame = useMemo(() => {
     if (!me || me.accountId === 0n) return undefined;
     return games.find((g) => g.phase < 2 && (g.whiteId === me.accountId || g.blackId === me.accountId));
   }, [games, me]);
+
+  // Sticky game routing: stay on the game screen after it finishes so the
+  // result modal can be shown; "Back to lobby" clears it.
+  const [stickyGameId, setStickyGameId] = useState<bigint | null>(null);
+  useEffect(() => {
+    if (myLiveGame) setStickyGameId(myLiveGame.gameId);
+  }, [myLiveGame]);
+
+  const currentGame = useMemo(() => {
+    if (!me || me.accountId === 0n) return undefined;
+    if (myLiveGame) return myLiveGame;
+    if (stickyGameId !== null) {
+      return games.find(
+        (g) => g.gameId === stickyGameId && (g.whiteId === me.accountId || g.blackId === me.accountId),
+      );
+    }
+    return undefined;
+  }, [me, myLiveGame, stickyGameId, games]);
 
   if (connectionError) {
     return (
@@ -49,6 +67,15 @@ function Shell() {
     );
   }
   if (!me || me.accountId === 0n) return <AuthScreen />;
-  if (myGame) return <GameScreen game={myGame} me={me} />;
+  if (currentGame) {
+    return (
+      <GameScreen
+        key={currentGame.gameId.toString()}
+        game={currentGame}
+        me={me}
+        onExit={() => setStickyGameId(null)}
+      />
+    );
+  }
   return <Lobby me={me} sessions={sessions} games={games} />;
 }
