@@ -113,6 +113,7 @@ fn finish_game(ctx: &ReducerContext, game_id: u64, result: u8, reason: u8) {
         for id in gems {
             ctx.db.game_gems().id().delete(id);
         }
+        crate::social::clear_spectators_for_game(ctx, game_id);
     }
 }
 
@@ -171,6 +172,17 @@ fn refresh_check_flags(ctx: &ReducerContext, game_id: u64) {
         g.black_mated = g.black_in_check && !rules::has_any_escape(&board, rules::Color::Black);
         ctx.db.game().game_id().update(g);
     }
+}
+
+/// Start a game between two players (queue pairing AND challenge accepts).
+pub fn start_game_pair(ctx: &ReducerContext, white_id: u64, white_name: &str, black_id: u64, black_name: &str) {
+    // entering a game cancels outstanding challenges, queue entries, and spectating
+    for id in [white_id, black_id] {
+        crate::social::clear_challenges_for(ctx, id);
+        crate::social::stop_spectating_inner(ctx, id);
+        ctx.db.queue_entry().account_id().delete(id);
+    }
+    start_game(ctx, white_id, white_name, black_id, black_name);
 }
 
 fn start_game(ctx: &ReducerContext, white_id: u64, white_name: &str, black_id: u64, black_name: &str) {
@@ -253,7 +265,7 @@ pub fn join_queue(ctx: &ReducerContext) -> Result<(), String> {
     match opponent {
         Some(op) => {
             ctx.db.queue_entry().account_id().delete(op.account_id);
-            start_game(ctx, op.account_id, &op.username, s.account_id, &s.username);
+            start_game_pair(ctx, op.account_id, &op.username, s.account_id, &s.username);
         }
         None => {
             ctx.db.queue_entry().insert(QueueEntry {

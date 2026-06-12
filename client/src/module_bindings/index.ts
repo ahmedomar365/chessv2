@@ -34,6 +34,9 @@ import {
 } from "spacetimedb";
 
 // Import all reducer arg schemas
+import AcceptChallengeReducer from "./accept_challenge_reducer";
+import CreateChallengeReducer from "./create_challenge_reducer";
+import DeclineChallengeReducer from "./decline_challenge_reducer";
 import JoinQueueReducer from "./join_queue_reducer";
 import LeaveQueueReducer from "./leave_queue_reducer";
 import LoginReducer from "./login_reducer";
@@ -43,10 +46,15 @@ import OfferDrawReducer from "./offer_draw_reducer";
 import PlayCardReducer from "./play_card_reducer";
 import RegisterReducer from "./register_reducer";
 import ResignReducer from "./resign_reducer";
+import SendChatReducer from "./send_chat_reducer";
+import SpectateReducer from "./spectate_reducer";
+import StopSpectatingReducer from "./stop_spectating_reducer";
 
 // Import all procedure arg schemas
 
 // Import all table schema definitions
+import ChallengeRow from "./challenge_table";
+import ChatMessageRow from "./chat_message_table";
 import EffectLogRow from "./effect_log_table";
 import GameRow from "./game_table";
 import GameGemsRow from "./game_gems_table";
@@ -55,11 +63,46 @@ import MyCardStateRow from "./my_card_state_table";
 import PieceRow from "./piece_table";
 import QueueEntryRow from "./queue_entry_table";
 import SessionRow from "./session_table";
+import SpectatorRow from "./spectator_table";
 
 /** Type-only namespace exports for generated type groups. */
 
 /** The schema information for all tables in this module. This is defined the same was as the tables would have been defined in the server. */
 const tablesSchema = __schema({
+  challenge: __table({
+    name: 'challenge',
+    indexes: [
+      { accessor: 'challenge_id', name: 'challenge_challenge_id_idx_btree', algorithm: 'btree', columns: [
+        'challengeId',
+      ] },
+      { accessor: 'from_id', name: 'challenge_from_id_idx_btree', algorithm: 'btree', columns: [
+        'fromId',
+      ] },
+      { accessor: 'to_id', name: 'challenge_to_id_idx_btree', algorithm: 'btree', columns: [
+        'toId',
+      ] },
+    ],
+    constraints: [
+      { name: 'challenge_challenge_id_key', constraint: 'unique', columns: ['challengeId'] },
+    ],
+  }, ChallengeRow),
+  chat_message: __table({
+    name: 'chat_message',
+    indexes: [
+      { accessor: 'channel', name: 'chat_message_channel_idx_btree', algorithm: 'btree', columns: [
+        'channel',
+      ] },
+      { accessor: 'game_id', name: 'chat_message_game_id_idx_btree', algorithm: 'btree', columns: [
+        'gameId',
+      ] },
+      { accessor: 'msg_id', name: 'chat_message_msg_id_idx_btree', algorithm: 'btree', columns: [
+        'msgId',
+      ] },
+    ],
+    constraints: [
+      { name: 'chat_message_msg_id_key', constraint: 'unique', columns: ['msgId'] },
+    ],
+  }, ChatMessageRow),
   effect_log: __table({
     name: 'effect_log',
     indexes: [
@@ -158,6 +201,23 @@ const tablesSchema = __schema({
       { name: 'session_identity_key', constraint: 'unique', columns: ['identity'] },
     ],
   }, SessionRow),
+  spectator: __table({
+    name: 'spectator',
+    indexes: [
+      { accessor: 'account_id', name: 'spectator_account_id_idx_btree', algorithm: 'btree', columns: [
+        'accountId',
+      ] },
+      { accessor: 'game_id', name: 'spectator_game_id_idx_btree', algorithm: 'btree', columns: [
+        'gameId',
+      ] },
+      { accessor: 'id', name: 'spectator_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'spectator_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, SpectatorRow),
   my_card_state: __table({
     name: 'my_card_state',
     indexes: [
@@ -169,6 +229,9 @@ const tablesSchema = __schema({
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
+  __reducerSchema("accept_challenge", AcceptChallengeReducer),
+  __reducerSchema("create_challenge", CreateChallengeReducer),
+  __reducerSchema("decline_challenge", DeclineChallengeReducer),
   __reducerSchema("join_queue", JoinQueueReducer),
   __reducerSchema("leave_queue", LeaveQueueReducer),
   __reducerSchema("login", LoginReducer),
@@ -178,6 +241,9 @@ const reducersSchema = __reducers(
   __reducerSchema("play_card", PlayCardReducer),
   __reducerSchema("register", RegisterReducer),
   __reducerSchema("resign", ResignReducer),
+  __reducerSchema("send_chat", SendChatReducer),
+  __reducerSchema("spectate", SpectateReducer),
+  __reducerSchema("stop_spectating", StopSpectatingReducer),
 );
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */

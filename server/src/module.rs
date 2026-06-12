@@ -403,6 +403,8 @@ pub fn client_disconnected(ctx: &ReducerContext) {
             // Only dequeue / start forfeit when the LAST connection drops.
             ctx.db.queue_entry().account_id().delete(account_id);
             crate::game::schedule_forfeit_if_in_game(ctx, account_id);
+            crate::social::clear_challenges_for(ctx, account_id);
+            crate::social::stop_spectating_inner(ctx, account_id);
         }
     }
 }

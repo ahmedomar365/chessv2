@@ -36,6 +36,33 @@ export const BoardSnapshot = __t.object("BoardSnapshot", {
 });
 export type BoardSnapshot = __Infer<typeof BoardSnapshot>;
 
+export const Challenge = __t.object("Challenge", {
+  challengeId: __t.u64(),
+  fromId: __t.u64(),
+  fromName: __t.string(),
+  toId: __t.u64(),
+  toName: __t.string(),
+  created: __t.timestamp(),
+});
+export type Challenge = __Infer<typeof Challenge>;
+
+export const ChatMessage = __t.object("ChatMessage", {
+  msgId: __t.u64(),
+  channel: __t.u8(),
+  gameId: __t.u64(),
+  accountId: __t.u64(),
+  username: __t.string(),
+  text: __t.string(),
+  ts: __t.timestamp(),
+});
+export type ChatMessage = __Infer<typeof ChatMessage>;
+
+export const ChatThrottle = __t.object("ChatThrottle", {
+  accountId: __t.u64(),
+  lastTs: __t.timestamp(),
+});
+export type ChatThrottle = __Infer<typeof ChatThrottle>;
+
 export const EffectLog = __t.object("EffectLog", {
   effectId: __t.u64(),
   gameId: __t.u64(),
@@ -142,4 +169,12 @@ export const Session = __t.object("Session", {
   status: __t.u8(),
 });
 export type Session = __Infer<typeof Session>;
+
+export const Spectator = __t.object("Spectator", {
+  id: __t.u64(),
+  gameId: __t.u64(),
+  accountId: __t.u64(),
+  username: __t.string(),
+});
+export type Spectator = __Infer<typeof Spectator>;
 
