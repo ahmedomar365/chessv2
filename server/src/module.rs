@@ -1,7 +1,9 @@
 //! SpacetimeDB tables and lifecycle reducers (wasm-only; pure logic lives in `rules`).
 
-use spacetimedb::{reducer, table, Identity, ReducerContext, Table, Timestamp};
+use spacetimedb::rand::RngCore;
+use spacetimedb::{reducer, table, Identity, ReducerContext, Table, TimeDuration, Timestamp};
 
+use crate::auth;
 use crate::rules::{Board, BoardPiece, Color, PieceType};
 
 // ---------------- tables ----------------
@@ -100,6 +102,15 @@ pub struct QueueEntry {
     pub queued_at: Timestamp,
 }
 
+/// PRIVATE — failed-login throttle per connection identity.
+#[table(accessor = auth_throttle)]
+pub struct AuthThrottle {
+    #[primary_key]
+    pub identity: Identity,
+    pub fails: u32,
+    pub locked_until: Timestamp,
+}
+
 // ---------------- conversions & helpers ----------------
 
 pub fn ty_to_u8(ty: PieceType) -> u8 {
@@ -161,6 +172,112 @@ pub fn snapshot_string(board: &Board) -> String {
         out[p.sq as usize] = if p.color == Color::White { ch.to_ascii_uppercase() } else { ch };
     }
     out.iter().collect()
+}
+
+// ---------------- auth ----------------
+
+fn bind_session(ctx: &ReducerContext, account_id: u64, username: &str) {
+    if let Some(mut s) = ctx.db.session().identity().find(ctx.sender()) {
+        s.account_id = account_id;
+        s.username = username.to_string();
+        ctx.db.session().identity().update(s);
+    } else {
+        ctx.db.session().insert(Session {
+            identity: ctx.sender(),
+            account_id,
+            username: username.to_string(),
+            online: true,
+            status: 0,
+        });
+    }
+}
+
+const MAX_AUTH_FAILS: u32 = 5;
+const AUTH_LOCK_SECS: i64 = 60;
+
+fn check_throttle(ctx: &ReducerContext) -> Result<(), String> {
+    if let Some(t) = ctx.db.auth_throttle().identity().find(ctx.sender()) {
+        if t.locked_until > ctx.timestamp {
+            return Err("Too many attempts. Try again in a minute".into());
+        }
+    }
+    Ok(())
+}
+
+fn record_auth_fail(ctx: &ReducerContext) {
+    let mut t = ctx.db.auth_throttle().identity().find(ctx.sender()).unwrap_or(AuthThrottle {
+        identity: ctx.sender(),
+        fails: 0,
+        locked_until: Timestamp::UNIX_EPOCH,
+    });
+    t.fails += 1;
+    if t.fails >= MAX_AUTH_FAILS {
+        t.fails = 0;
+        t.locked_until = ctx.timestamp + TimeDuration::from_micros(AUTH_LOCK_SECS * 1_000_000);
+    }
+    if ctx.db.auth_throttle().identity().find(ctx.sender()).is_some() {
+        ctx.db.auth_throttle().identity().update(t);
+    } else {
+        ctx.db.auth_throttle().insert(t);
+    }
+}
+
+#[reducer]
+pub fn register(ctx: &ReducerContext, username: String, password: String) -> Result<(), String> {
+    check_throttle(ctx)?;
+    auth::validate_username(&username)?;
+    if password.len() < 6 {
+        return Err("Password must be at least 6 characters".into());
+    }
+    let lower = username.to_lowercase();
+    if ctx.db.account().username_lower().find(&lower).is_some() {
+        return Err("Username already taken".into());
+    }
+    let mut salt = [0u8; 16];
+    let mut rng = ctx.rng();
+    rng.fill_bytes(&mut salt);
+    let acc = ctx.db.account().insert(Account {
+        account_id: 0,
+        username_lower: lower,
+        username: username.clone(),
+        pass_hash: auth::hash_password(&password, &salt),
+        created_at: ctx.timestamp,
+    });
+    bind_session(ctx, acc.account_id, &username);
+    Ok(())
+}
+
+/// Login NEVER creates an account, and there is no password recovery.
+#[reducer]
+pub fn login(ctx: &ReducerContext, username: String, password: String) -> Result<(), String> {
+    check_throttle(ctx)?;
+    let acc = match ctx.db.account().username_lower().find(username.to_lowercase()) {
+        Some(a) => a,
+        None => {
+            record_auth_fail(ctx);
+            return Err("Account does not exist".into());
+        }
+    };
+    if !auth::verify_password(&password, &acc.pass_hash) {
+        record_auth_fail(ctx);
+        return Err("Wrong password".into());
+    }
+    ctx.db.auth_throttle().identity().delete(ctx.sender());
+    bind_session(ctx, acc.account_id, &acc.username);
+    Ok(())
+}
+
+#[reducer]
+pub fn logout(ctx: &ReducerContext) {
+    if let Some(mut s) = ctx.db.session().identity().find(ctx.sender()) {
+        if s.account_id != 0 {
+            ctx.db.queue_entry().account_id().delete(s.account_id);
+        }
+        s.account_id = 0;
+        s.username = String::new();
+        s.status = 0;
+        ctx.db.session().identity().update(s);
+    }
 }
 
 // ---------------- lifecycle ----------------

@@ -19,6 +19,13 @@ export const Account = __t.object("Account", {
 });
 export type Account = __Infer<typeof Account>;
 
+export const AuthThrottle = __t.object("AuthThrottle", {
+  identity: __t.identity(),
+  fails: __t.u32(),
+  lockedUntil: __t.timestamp(),
+});
+export type AuthThrottle = __Infer<typeof AuthThrottle>;
+
 export const Game = __t.object("Game", {
   gameId: __t.u64(),
   whiteId: __t.u64(),

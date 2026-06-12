@@ -34,6 +34,9 @@ import {
 } from "spacetimedb";
 
 // Import all reducer arg schemas
+import LoginReducer from "./login_reducer";
+import LogoutReducer from "./logout_reducer";
+import RegisterReducer from "./register_reducer";
 
 // Import all procedure arg schemas
 
@@ -122,6 +125,9 @@ const tablesSchema = __schema({
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
+  __reducerSchema("login", LoginReducer),
+  __reducerSchema("logout", LogoutReducer),
+  __reducerSchema("register", RegisterReducer),
 );
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */
