@@ -14,11 +14,21 @@ export const COOLDOWN_MS: Record<number, number> = {
 
 const SQ = 100; // board is an 800×800 viewBox
 
+export interface Flash {
+  id: number;
+  sq: number;
+  /** css color keyword used by the flash ring */
+  tone: 'gold' | 'ember' | 'teal';
+}
+
 export interface BoardProps {
   pieces: readonly Piece[];
   flipped: boolean;
   selected: number | null;
   targets: readonly number[];
+  /** squares targetable by the armed card (cyan rings) */
+  cardTargets: readonly number[];
+  flashes: readonly Flash[];
   lastMove: { from: number; to: number } | null;
   checkSq: number | null;
   shakeSq: number | null;
@@ -37,7 +47,7 @@ const xyOf = (sq: number, flipped: boolean) => {
 };
 
 export default function BoardSvg(props: BoardProps) {
-  const { pieces, flipped, selected, targets, lastMove, checkSq, shakeSq, onSquare, frozen } = props;
+  const { pieces, flipped, selected, targets, cardTargets, flashes, lastMove, checkSq, shakeSq, onSquare, frozen } = props;
   const svgRef = useRef<SVGSVGElement>(null);
 
   const squareFromEvent = (e: React.PointerEvent): number | null => {
@@ -106,10 +116,23 @@ export default function BoardSvg(props: BoardProps) {
               style={{ transform: `translate(${x}px, ${y}px)` }}
             >
               <PieceGlyph ty={p.ty} color={p.color} />
+              {p.shielded && <circle cx={50} cy={50} r={46} className="shield-bubble" />}
               <CooldownRing piece={p} serverNow={props.serverNow} />
             </g>
           );
         })}
+
+      {/* card targeting rings */}
+      {cardTargets.map((sq) => {
+        const { x, y } = xyOf(sq, flipped);
+        return <circle key={`ct${sq}`} cx={x + 50} cy={y + 50} r={42} className="card-target-ring" />;
+      })}
+
+      {/* transient effect flashes */}
+      {flashes.map((f) => {
+        const { x, y } = xyOf(f.sq, flipped);
+        return <circle key={f.id} cx={x + 50} cy={y + 50} r={44} className={`fx-flash fx-${f.tone}`} />;
+      })}
 
       {/* legal target dots — on top so they're always visible */}
       {targets.map((sq) => {

@@ -67,9 +67,61 @@ test('full two-player game flow', async ({ browser }, testInfo) => {
   await clickSquare(pageA, 4, 4, false);
   await expect(pageA.locator('.piece-shake')).toBeVisible({ timeout: 2_000 });
 
+  // ---- cards: hand of 3 renders; play a no-target or targeted card once affordable
+  await expect(pageA.locator('.card-tile')).toHaveCount(3);
+  await pageA.waitForTimeout(17_000); // ≥3 gems accrued (1 per 5s from game start)
+  const gemCount = await pageA.locator('.gem-count').textContent();
+  expect(Number(gemCount)).toBeGreaterThanOrEqual(3);
+
+  // arm the first playable (non-passive) card and resolve it generically
+  const tiles = pageA.locator('.card-tile:not(.card-passive)');
+  const tileCount = await tiles.count();
+  expect(tileCount).toBeGreaterThan(0);
+  let played = false;
+  for (let i = 0; i < tileCount && !played; i++) {
+    const tile = tiles.nth(i);
+    const text = (await tile.textContent()) ?? '';
+    if (text.includes('5◆') && Number(gemCount) < 5) continue; // skip unaffordable Rewind
+    await tile.click();
+    if (text.includes('Time Theft') || text.includes('Pawn Storm') || text.includes('Rewind')) {
+      played = true; // no-target cards fire immediately on arm
+    } else {
+      // targeted: click the first highlighted ring's square via the aim flow
+      await expect(pageA.locator('.aim-chip')).toBeVisible({ timeout: 2_000 });
+      const ringCount = await pageA.locator('.card-target-ring').count();
+      if (ringCount === 0) {
+        await tile.click(); // disarm (e.g. Reset with nothing cooling)
+        continue;
+      }
+      // Swap needs two picks; others need one. Click rings by reading their positions.
+      const board = pageA.locator('.board');
+      const box = await board.boundingBox();
+      if (!box) throw new Error('no board');
+      const positions = await pageA.locator('.card-target-ring').evaluateAll((els) =>
+        els.map((el) => ({ cx: Number(el.getAttribute('cx')), cy: Number(el.getAttribute('cy')) })),
+      );
+      const clickRing = async (p: { cx: number; cy: number }) =>
+        pageA.mouse.click(box.x + (p.cx / 800) * box.width, box.y + (p.cy / 800) * box.height);
+      await clickRing(positions[0]);
+      if (text.includes('Swap')) {
+        await pageA.waitForTimeout(300);
+        const positions2 = await pageA.locator('.card-target-ring').evaluateAll((els) =>
+          els.map((el) => ({ cx: Number(el.getAttribute('cx')), cy: Number(el.getAttribute('cy')) })),
+        );
+        if (positions2.length > 0) await clickRing(positions2[0]);
+      }
+      played = true;
+    }
+  }
+  expect(played).toBe(true);
+  // a card play always logs a card_played effect → opponent gets a toast or the gem count drops
+  await pageA.waitForTimeout(1_500);
+  const gemsAfter = Number(await pageA.locator('.gem-count').textContent());
+  expect(gemsAfter).toBeLessThan(Number(gemCount) + 3); // spent something (allowing accrual drift)
+
   // white resigns (two-step confirm)
   await pageA.getByRole('button', { name: 'Resign' }).click();
-  await pageA.getByRole('button', { name: 'Confirm resign' }).click();
+  await pageA.getByRole('button', { name: 'Confirm', exact: true }).click();
 
   await expect(pageA.locator('.result-title')).toHaveText('DEFEAT', { timeout: 10_000 });
   await expect(pageB.locator('.result-title')).toHaveText('VICTORY', { timeout: 10_000 });

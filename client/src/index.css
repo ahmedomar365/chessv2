@@ -562,6 +562,147 @@ body::before {
   white-space: nowrap;
 }
 
+/* ---------- cards & gems ---------- */
+
+.game-foot { display: grid; gap: 8px; padding: 4px 8px 0; }
+.foot-row { display: flex; align-items: center; justify-content: space-between; }
+.opp-gems { color: var(--teal); font-size: 12px; font-weight: 700; }
+
+.gem-meter { display: inline-flex; align-items: center; gap: 4px; }
+.gem {
+  width: 11px;
+  height: 11px;
+  transform: rotate(45deg);
+  background: var(--bg-deep);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+.gem-full {
+  background: linear-gradient(135deg, var(--gold-bright), var(--gold-deep));
+  border-color: var(--gold-deep);
+  box-shadow: 0 0 8px rgba(232, 163, 61, 0.55);
+}
+.gem-next {
+  background: linear-gradient(
+    to top,
+    rgba(232, 163, 61, 0.7) calc(var(--p, 0) * 100%),
+    var(--bg-deep) calc(var(--p, 0) * 100%)
+  );
+}
+.gem-count {
+  margin-left: 6px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--gold-bright);
+  min-width: 20px;
+}
+
+.card-hand {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding-bottom: 4px;
+}
+.card-tile {
+  position: relative;
+  display: grid;
+  gap: 1px;
+  justify-items: center;
+  font: inherit;
+  text-align: center;
+  background: linear-gradient(180deg, var(--raise-2), var(--raise));
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--text);
+  padding: 10px 6px 8px;
+  cursor: pointer;
+  transition: transform 0.1s ease, border-color 0.15s ease, box-shadow 0.2s ease;
+  min-height: 86px;
+}
+.card-tile:active { transform: scale(0.97); }
+.card-icon { font-size: 22px; line-height: 1.1; }
+.card-name { font-weight: 700; font-size: 12.5px; }
+.card-cost {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-family: var(--font-display);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gold-bright);
+}
+.card-cost-passive { color: var(--dim); font-family: var(--font-body); }
+.card-blurb {
+  font-size: 9.5px;
+  line-height: 1.25;
+  color: var(--dim);
+}
+.card-armed {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(232, 163, 61, 0.35), 0 6px 24px rgba(232, 163, 61, 0.25);
+  transform: translateY(-3px);
+}
+.card-poor { opacity: 0.55; }
+.card-passive {
+  cursor: default;
+  border-style: dashed;
+  opacity: 0.85;
+}
+
+.aim-chip {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(7, 8, 13, 0.92);
+  border: 1px solid var(--gold-deep);
+  color: var(--gold-bright);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 99px;
+  pointer-events: none;
+  white-space: nowrap;
+  animation: rise 0.2s ease both;
+}
+
+/* board card-effects */
+.shield-bubble {
+  fill: rgba(63, 193, 204, 0.14);
+  stroke: var(--teal);
+  stroke-width: 3;
+  stroke-dasharray: 10 6;
+  animation: shieldspin 6s linear infinite;
+  pointer-events: none;
+}
+@keyframes shieldspin {
+  to { stroke-dashoffset: -160; }
+}
+
+.card-target-ring {
+  fill: rgba(63, 193, 204, 0.12);
+  stroke: var(--teal);
+  stroke-width: 4;
+  animation: checkpulse 1.1s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.fx-flash {
+  fill: none;
+  stroke-width: 8;
+  pointer-events: none;
+  animation: fxflash 0.75s ease-out both;
+}
+.fx-gold { stroke: var(--gold-bright); }
+.fx-ember { stroke: var(--ember); }
+.fx-teal { stroke: var(--teal); }
+@keyframes fxflash {
+  0% { opacity: 1; transform: scale(0.6); transform-origin: center; transform-box: fill-box; }
+  100% { opacity: 0; transform: scale(1.5); transform-origin: center; transform-box: fill-box; }
+}
+
 /* result modal */
 
 .modal-veil {
