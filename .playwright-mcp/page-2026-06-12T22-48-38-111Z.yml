@@ -1,0 +1,19 @@
+- generic [ref=e25]:
+  - banner [ref=e26]:
+    - generic [ref=e27]:
+      - text: CHESS
+      - emphasis [ref=e28]: V2
+    - generic [ref=e29]:
+      - generic [ref=e30]: alpha_one
+      - button "Log out" [ref=e31] [cursor=pointer]
+  - generic [ref=e32]:
+    - button "PLAY" [ref=e33] [cursor=pointer]
+    - paragraph [ref=e34]: 1 player online · 0 games live
+  - generic [ref=e35]:
+    - heading "In the arena" [level=2] [ref=e36]
+    - list [ref=e37]:
+      - listitem [ref=e38]:
+        - generic [ref=e39]:
+          - text: alpha_one
+          - generic [ref=e40]: you
+        - generic [ref=e41]: lobby

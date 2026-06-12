@@ -1,0 +1,12 @@
+- generic [ref=e42]:
+  - banner [ref=e43]:
+    - generic [ref=e44]:
+      - text: CHESS
+      - emphasis [ref=e45]: V2
+    - generic [ref=e46]:
+      - text: tester1
+      - emphasis [ref=e47]: vs
+      - text: alpha_one
+  - generic [ref=e48]:
+    - paragraph [ref=e49]: "Game #2 — you are Black. Board incoming."
+    - button "Resign" [ref=e50] [cursor=pointer]
