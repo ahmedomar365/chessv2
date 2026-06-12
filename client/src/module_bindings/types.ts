@@ -26,6 +26,28 @@ export const AuthThrottle = __t.object("AuthThrottle", {
 });
 export type AuthThrottle = __Infer<typeof AuthThrottle>;
 
+export const BoardSnapshot = __t.object("BoardSnapshot", {
+  id: __t.u64(),
+  gameId: __t.u64(),
+  ts: __t.timestamp(),
+  seq: __t.u32(),
+  board: __t.string(),
+  moved: __t.string(),
+});
+export type BoardSnapshot = __Infer<typeof BoardSnapshot>;
+
+export const EffectLog = __t.object("EffectLog", {
+  effectId: __t.u64(),
+  gameId: __t.u64(),
+  ts: __t.timestamp(),
+  kind: __t.u8(),
+  actorColor: __t.u8(),
+  card: __t.u8(),
+  aSq: __t.u8(),
+  bSq: __t.u8(),
+});
+export type EffectLog = __Infer<typeof EffectLog>;
+
 export const ForfeitTimer = __t.object("ForfeitTimer", {
   scheduledId: __t.u64(),
   scheduledAt: __t.scheduleAt(),
@@ -52,6 +74,25 @@ export const Game = __t.object("Game", {
   blackDrawOffer: __t.bool(),
 });
 export type Game = __Infer<typeof Game>;
+
+export const GameCardState = __t.object("GameCardState", {
+  id: __t.u64(),
+  gameId: __t.u64(),
+  accountId: __t.u64(),
+  deck: __t.byteArray(),
+  hand: __t.byteArray(),
+  discard: __t.byteArray(),
+});
+export type GameCardState = __Infer<typeof GameCardState>;
+
+export const GameGems = __t.object("GameGems", {
+  id: __t.u64(),
+  gameId: __t.u64(),
+  accountId: __t.u64(),
+  base: __t.u8(),
+  anchor: __t.timestamp(),
+});
+export type GameGems = __Infer<typeof GameGems>;
 
 export const GameStartTimer = __t.object("GameStartTimer", {
   scheduledId: __t.u64(),
@@ -81,6 +122,7 @@ export const Piece = __t.object("Piece", {
   sq: __t.u8(),
   hasMoved: __t.bool(),
   cooldownUntil: __t.timestamp(),
+  shielded: __t.bool(),
 });
 export type Piece = __Infer<typeof Piece>;
 

@@ -40,14 +40,18 @@ import LoginReducer from "./login_reducer";
 import LogoutReducer from "./logout_reducer";
 import MovePieceReducer from "./move_piece_reducer";
 import OfferDrawReducer from "./offer_draw_reducer";
+import PlayCardReducer from "./play_card_reducer";
 import RegisterReducer from "./register_reducer";
 import ResignReducer from "./resign_reducer";
 
 // Import all procedure arg schemas
 
 // Import all table schema definitions
+import EffectLogRow from "./effect_log_table";
 import GameRow from "./game_table";
+import GameGemsRow from "./game_gems_table";
 import MoveLogRow from "./move_log_table";
+import MyCardStateRow from "./my_card_state_table";
 import PieceRow from "./piece_table";
 import QueueEntryRow from "./queue_entry_table";
 import SessionRow from "./session_table";
@@ -56,6 +60,20 @@ import SessionRow from "./session_table";
 
 /** The schema information for all tables in this module. This is defined the same was as the tables would have been defined in the server. */
 const tablesSchema = __schema({
+  effect_log: __table({
+    name: 'effect_log',
+    indexes: [
+      { accessor: 'effect_id', name: 'effect_log_effect_id_idx_btree', algorithm: 'btree', columns: [
+        'effectId',
+      ] },
+      { accessor: 'game_id', name: 'effect_log_game_id_idx_btree', algorithm: 'btree', columns: [
+        'gameId',
+      ] },
+    ],
+    constraints: [
+      { name: 'effect_log_effect_id_key', constraint: 'unique', columns: ['effectId'] },
+    ],
+  }, EffectLogRow),
   game: __table({
     name: 'game',
     indexes: [
@@ -73,6 +91,20 @@ const tablesSchema = __schema({
       { name: 'game_game_id_key', constraint: 'unique', columns: ['gameId'] },
     ],
   }, GameRow),
+  game_gems: __table({
+    name: 'game_gems',
+    indexes: [
+      { accessor: 'game_id', name: 'game_gems_game_id_idx_btree', algorithm: 'btree', columns: [
+        'gameId',
+      ] },
+      { accessor: 'id', name: 'game_gems_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'game_gems_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, GameGemsRow),
   move_log: __table({
     name: 'move_log',
     indexes: [
@@ -126,6 +158,13 @@ const tablesSchema = __schema({
       { name: 'session_identity_key', constraint: 'unique', columns: ['identity'] },
     ],
   }, SessionRow),
+  my_card_state: __table({
+    name: 'my_card_state',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyCardStateRow),
 });
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
@@ -136,6 +175,7 @@ const reducersSchema = __reducers(
   __reducerSchema("logout", LogoutReducer),
   __reducerSchema("move_piece", MovePieceReducer),
   __reducerSchema("offer_draw", OfferDrawReducer),
+  __reducerSchema("play_card", PlayCardReducer),
   __reducerSchema("register", RegisterReducer),
   __reducerSchema("resign", ResignReducer),
 );

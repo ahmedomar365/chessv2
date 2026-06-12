@@ -12,6 +12,7 @@ import LoginReducer from "../login_reducer";
 import LogoutReducer from "../logout_reducer";
 import MovePieceReducer from "../move_piece_reducer";
 import OfferDrawReducer from "../offer_draw_reducer";
+import PlayCardReducer from "../play_card_reducer";
 import RegisterReducer from "../register_reducer";
 import ResignReducer from "../resign_reducer";
 
@@ -21,6 +22,7 @@ export type LoginParams = __Infer<typeof LoginReducer>;
 export type LogoutParams = __Infer<typeof LogoutReducer>;
 export type MovePieceParams = __Infer<typeof MovePieceReducer>;
 export type OfferDrawParams = __Infer<typeof OfferDrawReducer>;
+export type PlayCardParams = __Infer<typeof PlayCardReducer>;
 export type RegisterParams = __Infer<typeof RegisterReducer>;
 export type ResignParams = __Infer<typeof ResignReducer>;
 

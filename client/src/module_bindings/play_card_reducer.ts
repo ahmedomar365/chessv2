@@ -10,13 +10,9 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
-export default __t.row({
-  pieceId: __t.u64().primaryKey().name("piece_id"),
-  gameId: __t.u64().name("game_id"),
-  ty: __t.u8(),
-  color: __t.u8(),
-  sq: __t.u8(),
-  hasMoved: __t.bool().name("has_moved"),
-  cooldownUntil: __t.timestamp().name("cooldown_until"),
-  shielded: __t.bool(),
-});
+export default {
+  gameId: __t.u64(),
+  handIndex: __t.u8(),
+  targetA: __t.u8(),
+  targetB: __t.u8(),
+};

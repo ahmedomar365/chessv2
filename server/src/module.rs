@@ -1,7 +1,9 @@
 //! SpacetimeDB tables and lifecycle reducers (wasm-only; pure logic lives in `rules`).
 
 use spacetimedb::rand::RngCore;
-use spacetimedb::{reducer, table, Identity, ReducerContext, Table, TimeDuration, Timestamp};
+use spacetimedb::{
+    reducer, table, view, Identity, ReducerContext, Table, TimeDuration, Timestamp, ViewContext,
+};
 
 use crate::auth;
 use crate::rules::{Board, BoardPiece, Color, PieceType};
@@ -76,6 +78,8 @@ pub struct Piece {
     pub sq: u8,
     pub has_moved: bool,
     pub cooldown_until: Timestamp,
+    /// Barrier card: next capture attempt on this piece is repelled.
+    pub shielded: bool,
 }
 
 #[table(accessor = move_log, public)]
@@ -102,6 +106,83 @@ pub struct QueueEntry {
     pub account_id: u64,
     pub username: String,
     pub queued_at: Timestamp,
+}
+
+/// Time-gem balance per player per game — public (gem counts are visible tension).
+#[table(accessor = game_gems, public)]
+pub struct GameGems {
+    #[primary_key]
+    #[auto_inc]
+    pub id: u64,
+    #[index(btree)]
+    pub game_id: u64,
+    pub account_id: u64,
+    /// gems at `anchor`; current = min(10, base + elapsed/5s)
+    pub base: u8,
+    pub anchor: Timestamp,
+}
+
+/// PRIVATE — deck order, hand, and discard per player per game. Exposed only
+/// to the owning player through the `my_card_state` view.
+#[table(accessor = game_card_state)]
+pub struct GameCardState {
+    #[primary_key]
+    #[auto_inc]
+    pub id: u64,
+    #[index(btree)]
+    pub game_id: u64,
+    #[index(btree)]
+    pub account_id: u64,
+    pub deck: Vec<u8>,
+    pub hand: Vec<u8>,
+    pub discard: Vec<u8>,
+}
+
+/// Public play-by-play of card plays and effects — powers animations,
+/// opponent notifications, and spectators. Never reveals hands.
+#[table(accessor = effect_log, public)]
+pub struct EffectLog {
+    #[primary_key]
+    #[auto_inc]
+    pub effect_id: u64,
+    #[index(btree)]
+    pub game_id: u64,
+    pub ts: Timestamp,
+    /// 0 card_played, 1 repel, 2 guardian_save, 3 rewind, 4 freeze, 5 reset,
+    /// 6 pawn_storm, 7 swap, 8 theft, 9 shield_set
+    pub kind: u8,
+    pub actor_color: u8,
+    /// card id, 255 = n/a
+    pub card: u8,
+    /// squares involved, 255 = n/a
+    pub a_sq: u8,
+    pub b_sq: u8,
+}
+
+/// PRIVATE — full board state after every change; powers the Rewind card.
+/// `board`: 64 chars ('.', PNBRQK/pnbrqk); `moved`: 64 chars ('.', 'm').
+#[table(accessor = board_snapshot)]
+pub struct BoardSnapshot {
+    #[primary_key]
+    #[auto_inc]
+    pub id: u64,
+    #[index(btree)]
+    pub game_id: u64,
+    pub ts: Timestamp,
+    pub seq: u32,
+    pub board: String,
+    pub moved: String,
+}
+
+/// Each player sees ONLY their own hands (per live game) through this view.
+#[view(accessor = my_card_state, public)]
+fn my_card_state(ctx: &ViewContext) -> Vec<GameCardState> {
+    match ctx.db.session().identity().find(ctx.sender()) {
+        Some(s) if s.account_id != 0 => {
+            ctx.db.game_card_state().account_id().filter(s.account_id).collect()
+        }
+        _ => Vec::new(),
+    }
 }
 
 /// PRIVATE — failed-login throttle per connection identity.

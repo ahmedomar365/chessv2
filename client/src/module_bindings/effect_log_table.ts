@@ -11,12 +11,12 @@ import {
 } from "spacetimedb";
 
 export default __t.row({
-  pieceId: __t.u64().primaryKey().name("piece_id"),
+  effectId: __t.u64().primaryKey().name("effect_id"),
   gameId: __t.u64().name("game_id"),
-  ty: __t.u8(),
-  color: __t.u8(),
-  sq: __t.u8(),
-  hasMoved: __t.bool().name("has_moved"),
-  cooldownUntil: __t.timestamp().name("cooldown_until"),
-  shielded: __t.bool(),
+  ts: __t.timestamp(),
+  kind: __t.u8(),
+  actorColor: __t.u8().name("actor_color"),
+  card: __t.u8(),
+  aSq: __t.u8().name("a_sq"),
+  bSq: __t.u8().name("b_sq"),
 });

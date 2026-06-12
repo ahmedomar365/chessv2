@@ -11,12 +11,9 @@ import {
 } from "spacetimedb";
 
 export default __t.row({
-  pieceId: __t.u64().primaryKey().name("piece_id"),
+  id: __t.u64().primaryKey(),
   gameId: __t.u64().name("game_id"),
-  ty: __t.u8(),
-  color: __t.u8(),
-  sq: __t.u8(),
-  hasMoved: __t.bool().name("has_moved"),
-  cooldownUntil: __t.timestamp().name("cooldown_until"),
-  shielded: __t.bool(),
+  accountId: __t.u64().name("account_id"),
+  base: __t.u8(),
+  anchor: __t.timestamp(),
 });

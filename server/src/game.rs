@@ -1,7 +1,9 @@
 //! Game lifecycle: queue pairing, countdown, real-time moves, end conditions.
 
+use spacetimedb::rand::seq::SliceRandom;
 use spacetimedb::{reducer, table, ReducerContext, ScheduleAt, Table, TimeDuration, Timestamp};
 
+use crate::cards;
 use crate::module::*;
 use crate::rules;
 
@@ -98,7 +100,61 @@ fn finish_game(ctx: &ReducerContext, game_id: u64, result: u8, reason: u8) {
         for t in timers {
             ctx.db.forfeit_timer().scheduled_id().delete(t.scheduled_id);
         }
+        // prune per-game card/gem/snapshot state (move_log + effect_log stay for replays)
+        let snaps: Vec<u64> = ctx.db.board_snapshot().game_id().filter(game_id).map(|s| s.id).collect();
+        for id in snaps {
+            ctx.db.board_snapshot().id().delete(id);
+        }
+        let states: Vec<u64> = ctx.db.game_card_state().game_id().filter(game_id).map(|s| s.id).collect();
+        for id in states {
+            ctx.db.game_card_state().id().delete(id);
+        }
+        let gems: Vec<u64> = ctx.db.game_gems().game_id().filter(game_id).map(|s| s.id).collect();
+        for id in gems {
+            ctx.db.game_gems().id().delete(id);
+        }
     }
+}
+
+/// Persist the current board (positions + has_moved) for Rewind.
+fn write_snapshot(ctx: &ReducerContext, game_id: u64, seq: u32) {
+    let mut board = ['.'; 64];
+    let mut moved = ['.'; 64];
+    for p in ctx.db.piece().game_id().filter(game_id) {
+        let ch = match u8_to_ty(p.ty) {
+            rules::PieceType::Pawn => 'p',
+            rules::PieceType::Knight => 'n',
+            rules::PieceType::Bishop => 'b',
+            rules::PieceType::Rook => 'r',
+            rules::PieceType::Queen => 'q',
+            rules::PieceType::King => 'k',
+        };
+        board[p.sq as usize] = if p.color == 0 { ch.to_ascii_uppercase() } else { ch };
+        if p.has_moved {
+            moved[p.sq as usize] = 'm';
+        }
+    }
+    ctx.db.board_snapshot().insert(BoardSnapshot {
+        id: 0,
+        game_id,
+        ts: ctx.timestamp,
+        seq,
+        board: board.iter().collect(),
+        moved: moved.iter().collect(),
+    });
+}
+
+fn log_effect(ctx: &ReducerContext, game_id: u64, kind: u8, actor_color: u8, card: u8, a_sq: u8, b_sq: u8) {
+    ctx.db.effect_log().insert(EffectLog {
+        effect_id: 0,
+        game_id,
+        ts: ctx.timestamp,
+        kind,
+        actor_color,
+        card,
+        a_sq,
+        b_sq,
+    });
 }
 
 /// Recompute check/mate flags for both sides; auto-draw on king vs king.
@@ -145,8 +201,31 @@ fn start_game(ctx: &ReducerContext, white_id: u64, white_name: &str, black_id: u
             sq: p.sq,
             has_moved: false,
             cooldown_until: ready_at,
+            shielded: false,
         });
     }
+    // deal cards + anchor gems for both players
+    for account_id in [white_id, black_id] {
+        let mut deck = cards::DECK.to_vec();
+        deck.shuffle(&mut ctx.rng());
+        let hand: Vec<u8> = deck.split_off(deck.len() - cards::HAND_SIZE);
+        ctx.db.game_card_state().insert(GameCardState {
+            id: 0,
+            game_id: game.game_id,
+            account_id,
+            deck,
+            hand,
+            discard: Vec::new(),
+        });
+        ctx.db.game_gems().insert(GameGems {
+            id: 0,
+            game_id: game.game_id,
+            account_id,
+            base: 0,
+            anchor: ready_at,
+        });
+    }
+    write_snapshot(ctx, game.game_id, 0);
     ctx.db.game_start_timer().insert(GameStartTimer {
         scheduled_id: 0,
         scheduled_at: ready_at.into(),
@@ -242,6 +321,44 @@ pub fn move_piece(ctx: &ReducerContext, game_id: u64, from_sq: u8, to_sq: u8) ->
         .and_then(|cs| board.at(cs).map(|p| ty_to_u8(p.ty)))
         .unwrap_or(255);
 
+    // Barrier / Guardian interception: a shielded victim — or a king whose
+    // owner holds Guardian in hand — repels the attacker. The attacker never
+    // leaves its square and takes a (doubled, for Guardian) full cooldown.
+    if let Some(cs) = outcome.captured_sq {
+        let victim = ctx.db.piece().game_id().filter(game_id)
+            .find(|p| p.sq == cs)
+            .ok_or("Victim piece missing")?;
+        if victim.shielded {
+            let mut v = victim;
+            v.shielded = false;
+            ctx.db.piece().piece_id().update(v);
+            let mut atk = piece_row;
+            atk.cooldown_until = ctx.timestamp + TimeDuration::from_micros(cooldown_micros(atk.ty));
+            ctx.db.piece().piece_id().update(atk);
+            log_effect(ctx, game_id, 1, color_to_u8(my_color), 255, from_sq, cs);
+            return Ok(());
+        }
+        if victim.ty == 5 {
+            let defender_id = if game.white_id == s.account_id { game.black_id } else { game.white_id };
+            if let Some(mut dcs) = ctx.db.game_card_state().game_id().filter(game_id)
+                .find(|c| c.account_id == defender_id)
+            {
+                if let Some(pos) = dcs.hand.iter().position(|&c| c == cards::CARD_GUARDIAN) {
+                    dcs.hand.remove(pos);
+                    dcs.discard.push(cards::CARD_GUARDIAN);
+                    draw_card(ctx, &mut dcs);
+                    ctx.db.game_card_state().id().update(dcs);
+                    let mut atk = piece_row;
+                    atk.cooldown_until =
+                        ctx.timestamp + TimeDuration::from_micros(2 * cooldown_micros(atk.ty));
+                    ctx.db.piece().piece_id().update(atk);
+                    log_effect(ctx, game_id, 2, color_to_u8(my_color), cards::CARD_GUARDIAN, from_sq, cs);
+                    return Ok(());
+                }
+            }
+        }
+    }
+
     // Apply to tables.
     if let Some(cs) = outcome.captured_sq {
         if let Some(victim) = ctx.db.piece().game_id().filter(game_id).find(|p| p.sq == cs) {
@@ -286,6 +403,223 @@ pub fn move_piece(ctx: &ReducerContext, game_id: u64, from_sq: u8, to_sq: u8) ->
         return Ok(());
     }
     refresh_check_flags(ctx, game_id);
+    write_snapshot(ctx, game_id, seq + 1);
+    Ok(())
+}
+
+/// Draw one card; reshuffles the discard pile back into the deck when empty.
+fn draw_card(ctx: &ReducerContext, cs: &mut GameCardState) {
+    if cs.deck.is_empty() && !cs.discard.is_empty() {
+        cs.deck = std::mem::take(&mut cs.discard);
+        cs.deck.shuffle(&mut ctx.rng());
+    }
+    if let Some(c) = cs.deck.pop() {
+        cs.hand.push(c);
+    }
+}
+
+fn own_piece_at(ctx: &ReducerContext, game_id: u64, sq: u8, my_u8: u8) -> Result<Piece, String> {
+    let p = ctx.db.piece().game_id().filter(game_id).find(|p| p.sq == sq).ok_or("No piece there")?;
+    if p.color != my_u8 {
+        return Err("Target one of your own pieces".into());
+    }
+    Ok(p)
+}
+
+fn enemy_piece_at(ctx: &ReducerContext, game_id: u64, sq: u8, my_u8: u8) -> Result<Piece, String> {
+    let p = ctx.db.piece().game_id().filter(game_id).find(|p| p.sq == sq).ok_or("No piece there")?;
+    if p.color == my_u8 {
+        return Err("Target an enemy piece".into());
+    }
+    Ok(p)
+}
+
+/// Restore the board to its snapshot of ≥20s ago (or the earliest available).
+fn rewind_board(ctx: &ReducerContext, game_id: u64) -> Result<(), String> {
+    let cutoff = ctx.timestamp.to_micros_since_unix_epoch() - 20_000_000;
+    let snaps: Vec<BoardSnapshot> = ctx.db.board_snapshot().game_id().filter(game_id).collect();
+    let target = snaps
+        .iter()
+        .filter(|s| s.ts.to_micros_since_unix_epoch() <= cutoff)
+        .max_by_key(|s| s.seq)
+        .or_else(|| snaps.iter().min_by_key(|s| s.seq))
+        .ok_or("No snapshot available")?;
+
+    let ids: Vec<u64> = ctx.db.piece().game_id().filter(game_id).map(|p| p.piece_id).collect();
+    for id in ids {
+        ctx.db.piece().piece_id().delete(id);
+    }
+    let ready = ctx.timestamp + TimeDuration::from_micros(3_000_000);
+    let board = target.board.as_bytes();
+    let moved = target.moved.as_bytes();
+    for sq in 0..64usize {
+        let ch = board[sq] as char;
+        if ch == '.' {
+            continue;
+        }
+        let ty = match ch.to_ascii_lowercase() {
+            'p' => 0,
+            'n' => 1,
+            'b' => 2,
+            'r' => 3,
+            'q' => 4,
+            _ => 5,
+        };
+        ctx.db.piece().insert(Piece {
+            piece_id: 0,
+            game_id,
+            ty,
+            color: if ch.is_ascii_uppercase() { 0 } else { 1 },
+            sq: sq as u8,
+            has_moved: moved[sq] == b'm',
+            cooldown_until: ready,
+            shielded: false,
+        });
+    }
+    Ok(())
+}
+
+/// Play a card from your hand. Cards ARE playable while checked or mated —
+/// they are the comeback mechanic. targets are squares; 255 = unused.
+#[reducer]
+pub fn play_card(ctx: &ReducerContext, game_id: u64, hand_index: u8, target_a: u8, target_b: u8) -> Result<(), String> {
+    let s = logged_in(ctx)?;
+    let game = ctx.db.game().game_id().find(game_id).ok_or("No such game")?;
+    if game.phase != 1 {
+        return Err("Game is not live".into());
+    }
+    let my_color = color_of(&game, s.account_id)?;
+    let my_u8 = color_to_u8(my_color);
+
+    let mut cs = ctx.db.game_card_state().game_id().filter(game_id)
+        .find(|c| c.account_id == s.account_id)
+        .ok_or("No card state")?;
+    let card = *cs.hand.get(hand_index as usize).ok_or("No such card in hand")?;
+    if card == cards::CARD_GUARDIAN {
+        return Err("Guardian is passive — it triggers on its own".into());
+    }
+
+    let mut gems = ctx.db.game_gems().game_id().filter(game_id)
+        .find(|g| g.account_id == s.account_id)
+        .ok_or("No gem state")?;
+    let now_us = ctx.timestamp.to_micros_since_unix_epoch();
+    let (new_base, new_anchor) =
+        cards::spend(gems.base, gems.anchor.to_micros_since_unix_epoch(), now_us, cards::cost_of(card))
+            .ok_or("NOT_ENOUGH_GEMS")?;
+
+    let mut board_changed = false;
+    let mut stolen_bonus = 0u8;
+    match card {
+        cards::CARD_BARRIER => {
+            let mut p = own_piece_at(ctx, game_id, target_a, my_u8)?;
+            if p.shielded {
+                return Err("Already shielded".into());
+            }
+            p.shielded = true;
+            ctx.db.piece().piece_id().update(p);
+            log_effect(ctx, game_id, 9, my_u8, card, target_a, 255);
+        }
+        cards::CARD_RESET => {
+            let mut p = own_piece_at(ctx, game_id, target_a, my_u8)?;
+            if p.cooldown_until <= ctx.timestamp {
+                return Err("That piece is already ready".into());
+            }
+            p.cooldown_until = ctx.timestamp;
+            ctx.db.piece().piece_id().update(p);
+            log_effect(ctx, game_id, 5, my_u8, card, target_a, 255);
+        }
+        cards::CARD_REWIND => {
+            rewind_board(ctx, game_id)?;
+            board_changed = true;
+            log_effect(ctx, game_id, 3, my_u8, card, 255, 255);
+        }
+        cards::CARD_FREEZE => {
+            let mut p = enemy_piece_at(ctx, game_id, target_a, my_u8)?;
+            let base = if p.cooldown_until > ctx.timestamp { p.cooldown_until } else { ctx.timestamp };
+            p.cooldown_until = base + TimeDuration::from_micros(8_000_000);
+            ctx.db.piece().piece_id().update(p);
+            log_effect(ctx, game_id, 4, my_u8, card, target_a, 255);
+        }
+        cards::CARD_PAWN_STORM => {
+            let pawns: Vec<Piece> = ctx.db.piece().game_id().filter(game_id)
+                .filter(|p| p.color == my_u8 && p.ty == 0)
+                .collect();
+            if pawns.is_empty() {
+                return Err("You have no pawns".into());
+            }
+            for mut p in pawns {
+                p.cooldown_until = ctx.timestamp;
+                ctx.db.piece().piece_id().update(p);
+            }
+            log_effect(ctx, game_id, 6, my_u8, card, 255, 255);
+        }
+        cards::CARD_SWAP => {
+            if target_a == target_b {
+                return Err("Pick two different pieces".into());
+            }
+            let a = own_piece_at(ctx, game_id, target_a, my_u8)?;
+            let b = own_piece_at(ctx, game_id, target_b, my_u8)?;
+            if a.cooldown_until > ctx.timestamp || b.cooldown_until > ctx.timestamp {
+                return Err("Both pieces must be ready".into());
+            }
+            let mut sim = board_of(ctx, game_id);
+            for p in sim.pieces.iter_mut() {
+                if p.sq == target_a {
+                    p.sq = target_b;
+                } else if p.sq == target_b {
+                    p.sq = target_a;
+                }
+            }
+            if rules::in_check(&sim, my_color) {
+                return Err("LeavesKingAttacked".into());
+            }
+            let (mut a, mut b) = (a, b);
+            a.sq = target_b;
+            b.sq = target_a;
+            a.has_moved = true;
+            b.has_moved = true;
+            a.cooldown_until = ctx.timestamp + TimeDuration::from_micros(cooldown_micros(a.ty));
+            b.cooldown_until = ctx.timestamp + TimeDuration::from_micros(cooldown_micros(b.ty));
+            ctx.db.piece().piece_id().update(a);
+            ctx.db.piece().piece_id().update(b);
+            board_changed = true;
+            log_effect(ctx, game_id, 7, my_u8, card, target_a, target_b);
+        }
+        cards::CARD_TIME_THEFT => {
+            let opp_id = if game.white_id == s.account_id { game.black_id } else { game.white_id };
+            let mut opp = ctx.db.game_gems().game_id().filter(game_id)
+                .find(|g| g.account_id == opp_id)
+                .ok_or("No gem state")?;
+            let opp_anchor = opp.anchor.to_micros_since_unix_epoch();
+            let stolen = cards::gems_now(opp.base, opp_anchor, now_us).min(2);
+            if stolen == 0 {
+                return Err("Opponent has no gems to steal".into());
+            }
+            let (ob, oa) = cards::spend(opp.base, opp_anchor, now_us, stolen).expect("checked above");
+            opp.base = ob;
+            opp.anchor = Timestamp::from_micros_since_unix_epoch(oa);
+            ctx.db.game_gems().id().update(opp);
+            stolen_bonus = stolen;
+            log_effect(ctx, game_id, 8, my_u8, card, 255, 255);
+        }
+        _ => return Err("Unknown card".into()),
+    }
+
+    gems.base = (new_base + stolen_bonus).min(cards::GEM_CAP);
+    gems.anchor = Timestamp::from_micros_since_unix_epoch(new_anchor);
+    ctx.db.game_gems().id().update(gems);
+
+    cs.hand.remove(hand_index as usize);
+    cs.discard.push(card);
+    draw_card(ctx, &mut cs);
+    ctx.db.game_card_state().id().update(cs);
+    log_effect(ctx, game_id, 0, my_u8, card, target_a, target_b);
+
+    if board_changed {
+        refresh_check_flags(ctx, game_id);
+        let seq = ctx.db.move_log().game_id().filter(game_id).count() as u32;
+        write_snapshot(ctx, game_id, seq + 1);
+    }
     Ok(())
 }
 
