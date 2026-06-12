@@ -34,9 +34,14 @@ import {
 } from "spacetimedb";
 
 // Import all reducer arg schemas
+import JoinQueueReducer from "./join_queue_reducer";
+import LeaveQueueReducer from "./leave_queue_reducer";
 import LoginReducer from "./login_reducer";
 import LogoutReducer from "./logout_reducer";
+import MovePieceReducer from "./move_piece_reducer";
+import OfferDrawReducer from "./offer_draw_reducer";
 import RegisterReducer from "./register_reducer";
+import ResignReducer from "./resign_reducer";
 
 // Import all procedure arg schemas
 
@@ -125,9 +130,14 @@ const tablesSchema = __schema({
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
+  __reducerSchema("join_queue", JoinQueueReducer),
+  __reducerSchema("leave_queue", LeaveQueueReducer),
   __reducerSchema("login", LoginReducer),
   __reducerSchema("logout", LogoutReducer),
+  __reducerSchema("move_piece", MovePieceReducer),
+  __reducerSchema("offer_draw", OfferDrawReducer),
   __reducerSchema("register", RegisterReducer),
+  __reducerSchema("resign", ResignReducer),
 );
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */

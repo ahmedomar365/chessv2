@@ -26,6 +26,14 @@ export const AuthThrottle = __t.object("AuthThrottle", {
 });
 export type AuthThrottle = __Infer<typeof AuthThrottle>;
 
+export const ForfeitTimer = __t.object("ForfeitTimer", {
+  scheduledId: __t.u64(),
+  scheduledAt: __t.scheduleAt(),
+  gameId: __t.u64(),
+  accountId: __t.u64(),
+});
+export type ForfeitTimer = __Infer<typeof ForfeitTimer>;
+
 export const Game = __t.object("Game", {
   gameId: __t.u64(),
   whiteId: __t.u64(),
@@ -44,6 +52,13 @@ export const Game = __t.object("Game", {
   blackDrawOffer: __t.bool(),
 });
 export type Game = __Infer<typeof Game>;
+
+export const GameStartTimer = __t.object("GameStartTimer", {
+  scheduledId: __t.u64(),
+  scheduledAt: __t.scheduleAt(),
+  gameId: __t.u64(),
+});
+export type GameStartTimer = __Infer<typeof GameStartTimer>;
 
 export const MoveLog = __t.object("MoveLog", {
   moveId: __t.u64(),
@@ -81,6 +96,7 @@ export const Session = __t.object("Session", {
   accountId: __t.u64(),
   username: __t.string(),
   online: __t.bool(),
+  connections: __t.u32(),
   status: __t.u8(),
 });
 export type Session = __Infer<typeof Session>;

@@ -6,11 +6,21 @@
 import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
+import JoinQueueReducer from "../join_queue_reducer";
+import LeaveQueueReducer from "../leave_queue_reducer";
 import LoginReducer from "../login_reducer";
 import LogoutReducer from "../logout_reducer";
+import MovePieceReducer from "../move_piece_reducer";
+import OfferDrawReducer from "../offer_draw_reducer";
 import RegisterReducer from "../register_reducer";
+import ResignReducer from "../resign_reducer";
 
+export type JoinQueueParams = __Infer<typeof JoinQueueReducer>;
+export type LeaveQueueParams = __Infer<typeof LeaveQueueReducer>;
 export type LoginParams = __Infer<typeof LoginReducer>;
 export type LogoutParams = __Infer<typeof LogoutReducer>;
+export type MovePieceParams = __Infer<typeof MovePieceReducer>;
+export type OfferDrawParams = __Infer<typeof OfferDrawReducer>;
 export type RegisterParams = __Infer<typeof RegisterReducer>;
+export type ResignParams = __Infer<typeof ResignReducer>;
 

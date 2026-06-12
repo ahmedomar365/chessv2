@@ -30,6 +30,8 @@ pub struct Session {
     pub account_id: u64,
     pub username: String,
     pub online: bool,
+    /// live connections for this identity (multiple tabs); online = connections > 0
+    pub connections: u32,
     /// 0 lobby, 1 in_game, 2 spectating
     pub status: u8,
 }
@@ -187,6 +189,7 @@ fn bind_session(ctx: &ReducerContext, account_id: u64, username: &str) {
             account_id,
             username: username.to_string(),
             online: true,
+            connections: 1,
             status: 0,
         });
     }
@@ -288,14 +291,20 @@ pub fn init(_ctx: &ReducerContext) {}
 #[reducer(client_connected)]
 pub fn client_connected(ctx: &ReducerContext) {
     if let Some(mut s) = ctx.db.session().identity().find(ctx.sender()) {
+        s.connections += 1;
         s.online = true;
+        let account_id = s.account_id;
         ctx.db.session().identity().update(s);
+        if account_id != 0 {
+            crate::game::cancel_forfeits_for_account(ctx, account_id);
+        }
     } else {
         ctx.db.session().insert(Session {
             identity: ctx.sender(),
             account_id: 0,
             username: String::new(),
             online: true,
+            connections: 1,
             status: 0,
         });
     }
@@ -304,10 +313,15 @@ pub fn client_connected(ctx: &ReducerContext) {
 #[reducer(client_disconnected)]
 pub fn client_disconnected(ctx: &ReducerContext) {
     if let Some(mut s) = ctx.db.session().identity().find(ctx.sender()) {
-        if s.account_id != 0 {
-            ctx.db.queue_entry().account_id().delete(s.account_id);
-        }
-        s.online = false;
+        let account_id = s.account_id;
+        s.connections = s.connections.saturating_sub(1);
+        s.online = s.connections > 0;
+        let fully_offline = !s.online;
         ctx.db.session().identity().update(s);
+        if account_id != 0 && fully_offline {
+            // Only dequeue / start forfeit when the LAST connection drops.
+            ctx.db.queue_entry().account_id().delete(account_id);
+            crate::game::schedule_forfeit_if_in_game(ctx, account_id);
+        }
     }
 }
