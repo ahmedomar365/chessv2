@@ -1,0 +1,14 @@
+[package]
+name = "chessv2-module"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+spacetimedb = "2.5"
+argon2 = { version = "0.5", default-features = false, features = ["alloc", "password-hash"] }
+
+[profile.release]
+opt-level = "z"
