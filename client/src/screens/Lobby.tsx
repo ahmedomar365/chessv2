@@ -9,11 +9,15 @@ export default function Lobby({
   sessions,
   games,
   onOpenProfile,
+  onOpenShop,
+  onOpenCollection,
 }: {
   me: Session;
   sessions: readonly Session[];
   games: readonly Game[];
   onOpenProfile: (accountId: bigint) => void;
+  onOpenShop: () => void;
+  onOpenCollection: () => void;
 }) {
   const joinQueue = useReducer(reducers.joinQueue);
   const leaveQueue = useReducer(reducers.leaveQueue);
@@ -96,7 +100,13 @@ export default function Lobby({
             PLAY
           </button>
         )}
-        <div className="play-sub">
+        <div className="play-sub nav-row">
+          <button className="btn btn-ghost btn-sm" onClick={onOpenShop}>
+            🛒 Shop
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={onOpenCollection}>
+            🃏 Loadouts
+          </button>
           {mine ? (
             <button className="btn btn-ghost btn-sm" onClick={() => declineChallenge({ challengeId: mine.challengeId }).catch(oops)}>
               {mine.toId === 0n ? '🏳 Open challenge posted — cancel' : `⚔️ Challenge sent to ${mine.toName} — cancel`}

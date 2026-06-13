@@ -7,8 +7,13 @@ import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
 import AcceptChallengeReducer from "../accept_challenge_reducer";
+import BuyCardCopyReducer from "../buy_card_copy_reducer";
+import BuySkinReducer from "../buy_skin_reducer";
 import CreateChallengeReducer from "../create_challenge_reducer";
 import DeclineChallengeReducer from "../decline_challenge_reducer";
+import DeleteLoadoutReducer from "../delete_loadout_reducer";
+import EquipSkinReducer from "../equip_skin_reducer";
+import GrantPurchaseReducer from "../grant_purchase_reducer";
 import JoinQueueReducer from "../join_queue_reducer";
 import LeaveQueueReducer from "../leave_queue_reducer";
 import LoginReducer from "../login_reducer";
@@ -18,13 +23,21 @@ import OfferDrawReducer from "../offer_draw_reducer";
 import PlayCardReducer from "../play_card_reducer";
 import RegisterReducer from "../register_reducer";
 import ResignReducer from "../resign_reducer";
+import SaveLoadoutReducer from "../save_loadout_reducer";
 import SendChatReducer from "../send_chat_reducer";
+import SetActiveLoadoutReducer from "../set_active_loadout_reducer";
+import SetOperatorReducer from "../set_operator_reducer";
 import SpectateReducer from "../spectate_reducer";
 import StopSpectatingReducer from "../stop_spectating_reducer";
 
 export type AcceptChallengeParams = __Infer<typeof AcceptChallengeReducer>;
+export type BuyCardCopyParams = __Infer<typeof BuyCardCopyReducer>;
+export type BuySkinParams = __Infer<typeof BuySkinReducer>;
 export type CreateChallengeParams = __Infer<typeof CreateChallengeReducer>;
 export type DeclineChallengeParams = __Infer<typeof DeclineChallengeReducer>;
+export type DeleteLoadoutParams = __Infer<typeof DeleteLoadoutReducer>;
+export type EquipSkinParams = __Infer<typeof EquipSkinReducer>;
+export type GrantPurchaseParams = __Infer<typeof GrantPurchaseReducer>;
 export type JoinQueueParams = __Infer<typeof JoinQueueReducer>;
 export type LeaveQueueParams = __Infer<typeof LeaveQueueReducer>;
 export type LoginParams = __Infer<typeof LoginReducer>;
@@ -34,7 +47,10 @@ export type OfferDrawParams = __Infer<typeof OfferDrawReducer>;
 export type PlayCardParams = __Infer<typeof PlayCardReducer>;
 export type RegisterParams = __Infer<typeof RegisterReducer>;
 export type ResignParams = __Infer<typeof ResignReducer>;
+export type SaveLoadoutParams = __Infer<typeof SaveLoadoutReducer>;
 export type SendChatParams = __Infer<typeof SendChatReducer>;
+export type SetActiveLoadoutParams = __Infer<typeof SetActiveLoadoutReducer>;
+export type SetOperatorParams = __Infer<typeof SetOperatorReducer>;
 export type SpectateParams = __Infer<typeof SpectateReducer>;
 export type StopSpectatingParams = __Infer<typeof StopSpectatingReducer>;
 

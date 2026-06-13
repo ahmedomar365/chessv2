@@ -11,14 +11,7 @@ import {
 } from "spacetimedb";
 
 export default __t.row({
-  accountId: __t.u64().primaryKey().name("account_id"),
-  username: __t.string(),
-  rating: __t.i32(),
-  games: __t.u32(),
-  wins: __t.u32(),
-  losses: __t.u32(),
-  draws: __t.u32(),
-  streak: __t.u32(),
-  peak: __t.i32(),
-  equippedSkin: __t.u8().name("equipped_skin"),
+  accountId: __t.u64().name("account_id"),
+  coins: __t.u64(),
+  crowns: __t.u64(),
 });

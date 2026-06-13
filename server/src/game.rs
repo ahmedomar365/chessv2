@@ -98,6 +98,21 @@ fn finish_game(ctx: &ReducerContext, game_id: u64, result: u8, reason: u8) {
         if rated && result != 0 {
             apply_elo(ctx, w, b, result);
         }
+        // coin rewards: win 100 (+10 × streak, cap +50), loss 25, draw 40 each
+        match result {
+            1 | 2 => {
+                let (winner, loser) = if result == 1 { (w, b) } else { (b, w) };
+                let streak = ctx.db.player_profile().account_id().find(winner).map(|p| p.streak).unwrap_or(0);
+                let bonus = (streak.saturating_sub(1) as u64 * 10).min(50);
+                crate::economy::award_coins(ctx, winner, 100 + bonus);
+                crate::economy::award_coins(ctx, loser, 25);
+            }
+            3 => {
+                crate::economy::award_coins(ctx, w, 40);
+                crate::economy::award_coins(ctx, b, 40);
+            }
+            _ => {}
+        }
         set_status_for_account(ctx, w, 0);
         set_status_for_account(ctx, b, 0);
         let timers: Vec<ForfeitTimer> = ctx.db.forfeit_timer().game_id().filter(game_id).collect();
@@ -268,9 +283,9 @@ fn start_game(ctx: &ReducerContext, white_id: u64, white_name: &str, black_id: u
             shielded: false,
         });
     }
-    // deal cards + anchor gems for both players
+    // deal cards + anchor gems for both players (from each player's active loadout)
     for account_id in [white_id, black_id] {
-        let mut deck = cards::DECK.to_vec();
+        let mut deck = crate::economy::active_deck(ctx, account_id);
         deck.shuffle(&mut ctx.rng());
         let hand: Vec<u8> = deck.split_off(deck.len() - cards::HAND_SIZE);
         ctx.db.game_card_state().insert(GameCardState {

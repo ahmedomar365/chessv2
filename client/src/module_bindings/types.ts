@@ -36,6 +36,14 @@ export const BoardSnapshot = __t.object("BoardSnapshot", {
 });
 export type BoardSnapshot = __Infer<typeof BoardSnapshot>;
 
+export const CardOwnership = __t.object("CardOwnership", {
+  id: __t.u64(),
+  accountId: __t.u64(),
+  cardId: __t.u8(),
+  copies: __t.u8(),
+});
+export type CardOwnership = __Infer<typeof CardOwnership>;
+
 export const Challenge = __t.object("Challenge", {
   challengeId: __t.u64(),
   fromId: __t.u64(),
@@ -129,6 +137,15 @@ export const GameStartTimer = __t.object("GameStartTimer", {
 });
 export type GameStartTimer = __Infer<typeof GameStartTimer>;
 
+export const Loadout = __t.object("Loadout", {
+  loadoutId: __t.u64(),
+  accountId: __t.u64(),
+  name: __t.string(),
+  cards: __t.byteArray(),
+  active: __t.bool(),
+});
+export type Loadout = __Infer<typeof Loadout>;
+
 export const MoveLog = __t.object("MoveLog", {
   moveId: __t.u64(),
   gameId: __t.u64(),
@@ -141,6 +158,12 @@ export const MoveLog = __t.object("MoveLog", {
   boardAfter: __t.string(),
 });
 export type MoveLog = __Infer<typeof MoveLog>;
+
+export const OperatorConfig = __t.object("OperatorConfig", {
+  key: __t.u8(),
+  operator: __t.identity(),
+});
+export type OperatorConfig = __Infer<typeof OperatorConfig>;
 
 export const Piece = __t.object("Piece", {
   pieceId: __t.u64(),
@@ -164,8 +187,18 @@ export const PlayerProfile = __t.object("PlayerProfile", {
   draws: __t.u32(),
   streak: __t.u32(),
   peak: __t.i32(),
+  equippedSkin: __t.u8(),
 });
 export type PlayerProfile = __Infer<typeof PlayerProfile>;
+
+export const Purchase = __t.object("Purchase", {
+  id: __t.u64(),
+  paypalOrderId: __t.string(),
+  accountId: __t.u64(),
+  crowns: __t.u64(),
+  ts: __t.timestamp(),
+});
+export type Purchase = __Infer<typeof Purchase>;
 
 export const QueueEntry = __t.object("QueueEntry", {
   accountId: __t.u64(),
@@ -192,6 +225,21 @@ export const Session = __t.object("Session", {
 });
 export type Session = __Infer<typeof Session>;
 
+export const SkinCatalog = __t.object("SkinCatalog", {
+  skinId: __t.u8(),
+  name: __t.string(),
+  free: __t.bool(),
+  priceCrowns: __t.u64(),
+});
+export type SkinCatalog = __Infer<typeof SkinCatalog>;
+
+export const SkinOwnership = __t.object("SkinOwnership", {
+  id: __t.u64(),
+  accountId: __t.u64(),
+  skinId: __t.u8(),
+});
+export type SkinOwnership = __Infer<typeof SkinOwnership>;
+
 export const Spectator = __t.object("Spectator", {
   id: __t.u64(),
   gameId: __t.u64(),
@@ -199,4 +247,11 @@ export const Spectator = __t.object("Spectator", {
   username: __t.string(),
 });
 export type Spectator = __Infer<typeof Spectator>;
+
+export const Wallet = __t.object("Wallet", {
+  accountId: __t.u64(),
+  coins: __t.u64(),
+  crowns: __t.u64(),
+});
+export type Wallet = __Infer<typeof Wallet>;
 

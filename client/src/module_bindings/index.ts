@@ -35,8 +35,13 @@ import {
 
 // Import all reducer arg schemas
 import AcceptChallengeReducer from "./accept_challenge_reducer";
+import BuyCardCopyReducer from "./buy_card_copy_reducer";
+import BuySkinReducer from "./buy_skin_reducer";
 import CreateChallengeReducer from "./create_challenge_reducer";
 import DeclineChallengeReducer from "./decline_challenge_reducer";
+import DeleteLoadoutReducer from "./delete_loadout_reducer";
+import EquipSkinReducer from "./equip_skin_reducer";
+import GrantPurchaseReducer from "./grant_purchase_reducer";
 import JoinQueueReducer from "./join_queue_reducer";
 import LeaveQueueReducer from "./leave_queue_reducer";
 import LoginReducer from "./login_reducer";
@@ -46,7 +51,10 @@ import OfferDrawReducer from "./offer_draw_reducer";
 import PlayCardReducer from "./play_card_reducer";
 import RegisterReducer from "./register_reducer";
 import ResignReducer from "./resign_reducer";
+import SaveLoadoutReducer from "./save_loadout_reducer";
 import SendChatReducer from "./send_chat_reducer";
+import SetActiveLoadoutReducer from "./set_active_loadout_reducer";
+import SetOperatorReducer from "./set_operator_reducer";
 import SpectateReducer from "./spectate_reducer";
 import StopSpectatingReducer from "./stop_spectating_reducer";
 
@@ -60,11 +68,16 @@ import GameRow from "./game_table";
 import GameGemsRow from "./game_gems_table";
 import MoveLogRow from "./move_log_table";
 import MyCardStateRow from "./my_card_state_table";
+import MyCardsRow from "./my_cards_table";
+import MyLoadoutsRow from "./my_loadouts_table";
+import MySkinsRow from "./my_skins_table";
+import MyWalletRow from "./my_wallet_table";
 import PieceRow from "./piece_table";
 import PlayerProfileRow from "./player_profile_table";
 import QueueEntryRow from "./queue_entry_table";
 import RatingHistoryRow from "./rating_history_table";
 import SessionRow from "./session_table";
+import SkinCatalogRow from "./skin_catalog_table";
 import SpectatorRow from "./spectator_table";
 
 /** Type-only namespace exports for generated type groups. */
@@ -228,6 +241,17 @@ const tablesSchema = __schema({
       { name: 'session_identity_key', constraint: 'unique', columns: ['identity'] },
     ],
   }, SessionRow),
+  skin_catalog: __table({
+    name: 'skin_catalog',
+    indexes: [
+      { accessor: 'skin_id', name: 'skin_catalog_skin_id_idx_btree', algorithm: 'btree', columns: [
+        'skinId',
+      ] },
+    ],
+    constraints: [
+      { name: 'skin_catalog_skin_id_key', constraint: 'unique', columns: ['skinId'] },
+    ],
+  }, SkinCatalogRow),
   spectator: __table({
     name: 'spectator',
     indexes: [
@@ -252,13 +276,46 @@ const tablesSchema = __schema({
     constraints: [
     ],
   }, MyCardStateRow),
+  my_cards: __table({
+    name: 'my_cards',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyCardsRow),
+  my_loadouts: __table({
+    name: 'my_loadouts',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyLoadoutsRow),
+  my_skins: __table({
+    name: 'my_skins',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MySkinsRow),
+  my_wallet: __table({
+    name: 'my_wallet',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyWalletRow),
 });
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
   __reducerSchema("accept_challenge", AcceptChallengeReducer),
+  __reducerSchema("buy_card_copy", BuyCardCopyReducer),
+  __reducerSchema("buy_skin", BuySkinReducer),
   __reducerSchema("create_challenge", CreateChallengeReducer),
   __reducerSchema("decline_challenge", DeclineChallengeReducer),
+  __reducerSchema("delete_loadout", DeleteLoadoutReducer),
+  __reducerSchema("equip_skin", EquipSkinReducer),
+  __reducerSchema("grant_purchase", GrantPurchaseReducer),
   __reducerSchema("join_queue", JoinQueueReducer),
   __reducerSchema("leave_queue", LeaveQueueReducer),
   __reducerSchema("login", LoginReducer),
@@ -268,7 +325,10 @@ const reducersSchema = __reducers(
   __reducerSchema("play_card", PlayCardReducer),
   __reducerSchema("register", RegisterReducer),
   __reducerSchema("resign", ResignReducer),
+  __reducerSchema("save_loadout", SaveLoadoutReducer),
   __reducerSchema("send_chat", SendChatReducer),
+  __reducerSchema("set_active_loadout", SetActiveLoadoutReducer),
+  __reducerSchema("set_operator", SetOperatorReducer),
   __reducerSchema("spectate", SpectateReducer),
   __reducerSchema("stop_spectating", StopSpectatingReducer),
 );

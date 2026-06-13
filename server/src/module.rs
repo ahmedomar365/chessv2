@@ -123,6 +123,8 @@ pub struct PlayerProfile {
     /// current win streak
     pub streak: u32,
     pub peak: i32,
+    /// equipped theme (skin_catalog id; 0 = Classic)
+    pub equipped_skin: u8,
 }
 
 /// Rating after each rated game — powers profile graphs.
@@ -366,7 +368,9 @@ pub fn register(ctx: &ReducerContext, username: String, password: String) -> Res
         draws: 0,
         streak: 0,
         peak: 1200,
+        equipped_skin: 0,
     });
+    crate::economy::seed_new_account(ctx, acc.account_id);
     bind_session(ctx, acc.account_id, &username);
     Ok(())
 }
@@ -407,7 +411,9 @@ pub fn logout(ctx: &ReducerContext) {
 // ---------------- lifecycle ----------------
 
 #[reducer(init)]
-pub fn init(_ctx: &ReducerContext) {}
+pub fn init(ctx: &ReducerContext) {
+    crate::economy::seed_skins(ctx);
+}
 
 #[reducer(client_connected)]
 pub fn client_connected(ctx: &ReducerContext) {

@@ -7,13 +7,17 @@ import Lobby from './screens/Lobby';
 import GameScreen from './screens/GameScreen';
 import ProfileScreen from './screens/ProfileScreen';
 import ReplayScreen from './screens/ReplayScreen';
+import ShopScreen from './screens/ShopScreen';
+import CollectionScreen from './screens/CollectionScreen';
 
 const builder = connectionBuilder();
 
 type Route =
   | { kind: 'lobby' }
   | { kind: 'profile'; accountId: bigint }
-  | { kind: 'replay'; gameId: bigint; fromProfile?: bigint };
+  | { kind: 'replay'; gameId: bigint; fromProfile?: bigint }
+  | { kind: 'shop' }
+  | { kind: 'collection' };
 
 export default function App() {
   return (
@@ -114,12 +118,20 @@ function Shell() {
       />
     );
   }
+  if (route.kind === 'shop') {
+    return <ShopScreen me={me} onBack={() => setRoute({ kind: 'lobby' })} />;
+  }
+  if (route.kind === 'collection') {
+    return <CollectionScreen onBack={() => setRoute({ kind: 'lobby' })} />;
+  }
   return (
     <Lobby
       me={me}
       sessions={sessions}
       games={games}
       onOpenProfile={(accountId) => setRoute({ kind: 'profile', accountId })}
+      onOpenShop={() => setRoute({ kind: 'shop' })}
+      onOpenCollection={() => setRoute({ kind: 'collection' })}
     />
   );
 }
