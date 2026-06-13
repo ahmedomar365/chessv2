@@ -1,6 +1,37 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Piece } from '../module_bindings/types';
 import { PieceGlyph } from './pieces';
+import { THEMES, type Theme } from './themes';
+
+/** Per-instance SVG gradient defs + CSS vars for a theme. */
+export function ThemeDefs({ theme, prefix }: { theme: Theme; prefix: string }) {
+  return (
+    <defs>
+      <linearGradient id={`${prefix}-pw`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor={theme.whiteFill} />
+        <stop offset="1" stopColor={theme.whiteFill2} />
+      </linearGradient>
+      <linearGradient id={`${prefix}-pb`} x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stopColor={theme.blackFill} />
+        <stop offset="1" stopColor={theme.blackFill2} />
+      </linearGradient>
+    </defs>
+  );
+}
+
+export function themeVars(theme: Theme, prefix: string): React.CSSProperties {
+  return {
+    ['--sq-light' as string]: theme.sqLight,
+    ['--sq-dark' as string]: theme.sqDark,
+    ['--sq-accent' as string]: theme.accent,
+    ['--pw-fill' as string]: `url(#${prefix}-pw)`,
+    ['--pb-fill' as string]: `url(#${prefix}-pb)`,
+    ['--pw-stroke' as string]: theme.whiteStroke,
+    ['--pb-stroke' as string]: theme.blackStroke,
+    ['--pw-detail' as string]: theme.whiteDetail,
+    ['--pb-detail' as string]: theme.blackDetail,
+  };
+}
 
 /** Cooldown per piece type (ms) — mirrors server/src/game.rs cooldown_micros. */
 export const COOLDOWN_MS: Record<number, number> = {
@@ -36,6 +67,7 @@ export interface BoardProps {
   serverNow: () => number;
   onSquare: (sq: number) => void;
   frozen: boolean;
+  theme?: Theme;
 }
 
 const xyOf = (sq: number, flipped: boolean) => {
@@ -48,6 +80,7 @@ const xyOf = (sq: number, flipped: boolean) => {
 
 export default function BoardSvg(props: BoardProps) {
   const { pieces, flipped, selected, targets, cardTargets, flashes, lastMove, checkSq, shakeSq, onSquare, frozen } = props;
+  const theme = props.theme ?? THEMES[0];
   const svgRef = useRef<SVGSVGElement>(null);
 
   const squareFromEvent = (e: React.PointerEvent): number | null => {
@@ -67,11 +100,13 @@ export default function BoardSvg(props: BoardProps) {
       ref={svgRef}
       className={`board ${frozen ? 'board-frozen' : ''}`}
       viewBox="0 0 800 800"
+      style={themeVars(theme, 'live')}
       onPointerDown={(e) => {
         const sq = squareFromEvent(e);
         if (sq !== null) onSquare(sq);
       }}
     >
+      <ThemeDefs theme={theme} prefix="live" />
       {/* squares */}
       {Array.from({ length: 64 }, (_, sq) => {
         const { x, y } = xyOf(sq, flipped);

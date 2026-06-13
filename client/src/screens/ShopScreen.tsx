@@ -3,6 +3,8 @@ import { useReducer, useTable } from 'spacetimedb/react';
 import { reducers, tables } from '../module_bindings';
 import type { Session } from '../module_bindings/types';
 import { CARDS } from '../game/cardsMeta';
+import MiniPreview from '../game/MiniPreview';
+import { themeById } from '../game/themes';
 
 const PAY_BASE = location.hostname === 'localhost' ? 'https://chessv2.com/api/pay' : '/api/pay';
 
@@ -97,39 +99,42 @@ export default function ShopScreen({ me, onBack }: { me: Session; onBack: () => 
 
       <section className="panel">
         <h2 className="panel-title">Themes — 3 free, 10 premium</h2>
-        <ul className="player-list">
+        <div className="theme-grid">
           {[...skins]
             .sort((a, b) => a.skinId - b.skinId)
             .map((s) => {
               const owned = s.free || mySkins.some((o) => o.skinId === s.skinId);
               const isEquipped = equipped === s.skinId;
               return (
-                <li key={s.skinId} className="player-row">
-                  <span className="player-name">
-                    {s.name}
-                    {s.free && <span className="vs-dim">free</span>}
-                    {isEquipped && <span className="you-chip">equipped</span>}
-                  </span>
-                  {owned ? (
-                    <button
-                      className="btn btn-ghost btn-sm"
-                      disabled={isEquipped}
-                      onClick={() => equipSkin({ skinId: s.skinId }).then(() => say('Equipped!')).catch(oops)}
-                    >
-                      Equip
-                    </button>
-                  ) : (
-                    <button
-                      className="btn btn-gold btn-sm"
-                      onClick={() => buySkin({ skinId: s.skinId }).then(() => say('Theme unlocked!')).catch(oops)}
-                    >
-                      {s.priceCrowns.toString()} ♛
-                    </button>
-                  )}
-                </li>
+                <div key={s.skinId} className={`theme-card ${isEquipped ? 'theme-equipped' : ''}`}>
+                  <MiniPreview theme={themeById(s.skinId)} />
+                  <div className="theme-row">
+                    <span className="player-name">
+                      {s.name}
+                      {s.free && <span className="vs-dim">free</span>}
+                      {isEquipped && <span className="you-chip">equipped</span>}
+                    </span>
+                    {owned ? (
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        disabled={isEquipped}
+                        onClick={() => equipSkin({ skinId: s.skinId }).then(() => say('Equipped!')).catch(oops)}
+                      >
+                        Equip
+                      </button>
+                    ) : (
+                      <button
+                        className="btn btn-gold btn-sm"
+                        onClick={() => buySkin({ skinId: s.skinId }).then(() => say('Theme unlocked!')).catch(oops)}
+                      >
+                        {s.priceCrowns.toString()} ♛
+                      </button>
+                    )}
+                  </div>
+                </div>
               );
             })}
-        </ul>
+        </div>
       </section>
 
       {toast && <div className="toast toast-fixed">{toast}</div>}

@@ -409,10 +409,10 @@ body::before {
 }
 .board-frozen { filter: saturate(0.45) brightness(0.75); }
 
-.sq-light { fill: #3a3f52; }
-.sq-dark { fill: #262a3a; }
-.sq-last { fill: rgba(232, 163, 61, 0.16); }
-.sq-selected { fill: rgba(232, 163, 61, 0.28); }
+.sq-light { fill: var(--sq-light, #3a3f52); }
+.sq-dark { fill: var(--sq-dark, #262a3a); }
+.sq-last { fill: var(--sq-accent, rgba(232, 163, 61, 0.16)); opacity: 0.7; }
+.sq-selected { fill: var(--sq-accent, rgba(232, 163, 61, 0.28)); }
 
 .coords text {
   font-family: var(--font-body);
@@ -429,17 +429,17 @@ body::before {
 
 .piece-glyph { stroke-linejoin: round; stroke-linecap: round; }
 .piece-white {
-  fill: #efe6d2;
-  stroke: #181a22;
+  fill: var(--pw-fill, #efe6d2);
+  stroke: var(--pw-stroke, #181a22);
   stroke-width: 3;
-  --piece-detail: #181a22;
+  --piece-detail: var(--pw-detail, #181a22);
   filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.45));
 }
 .piece-black {
-  fill: #0f1016;
-  stroke: #a89e88;
+  fill: var(--pb-fill, #0f1016);
+  stroke: var(--pb-stroke, #a89e88);
   stroke-width: 2.5;
-  --piece-detail: #a89e88;
+  --piece-detail: var(--pb-detail, #a89e88);
   filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.5));
 }
 
@@ -893,6 +893,20 @@ body::before {
 .deck-slot-full { border-style: solid; border-color: var(--gold-deep); background: var(--raise-2); }
 .pick-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0 16px; }
 .new-loadout { margin-top: 10px; }
+
+/* themes */
+.theme-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 12px; }
+.theme-card {
+  background: var(--raise-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.theme-card:hover { border-color: var(--dim); }
+.theme-equipped { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 6px 24px rgba(232, 163, 61, 0.2); }
+.mini-preview { width: 100%; display: block; }
+.theme-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 11px; font-size: 13.5px; }
 
 /* result modal */
 

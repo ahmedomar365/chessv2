@@ -6,6 +6,7 @@ import BoardSvg, { type Flash } from '../game/BoardSvg';
 import { CardHand, GemMeter } from '../game/CardHand';
 import { CARDS, gemsNow } from '../game/cardsMeta';
 import { legalTargets, type LPiece } from '../game/legal';
+import { themeById } from '../game/themes';
 import ChatPanel from '../components/ChatPanel';
 
 export default function GameScreen({
@@ -32,6 +33,8 @@ export default function GameScreen({
   const [moves] = useTable(tables.move_log.where((r) => r.gameId.eq(game.gameId)));
   const [gemRows] = useTable(tables.game_gems.where((r) => r.gameId.eq(game.gameId)));
   const [cardRows] = useTable(tables.my_card_state);
+  const [myProfiles] = useTable(tables.player_profile.where((r) => r.accountId.eq(me.accountId)));
+  const theme = themeById(myProfiles[0]?.equippedSkin);
 
   const amWhite = spectating ? true : game.whiteId === me.accountId;
   const myColor = amWhite ? 0 : 1;
@@ -344,6 +347,7 @@ export default function GameScreen({
           serverNow={serverNow}
           onSquare={onSquare}
           frozen={myMated}
+          theme={theme}
         />
 
         {countLeft !== null && (
