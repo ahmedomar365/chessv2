@@ -13,14 +13,13 @@ export default function Lobby({
   sessions,
   games,
   onOpenProfile,
-  onOpenShop,
   onOpenCollection,
 }: {
   me: Session;
   sessions: readonly Session[];
   games: readonly Game[];
   onOpenProfile: (accountId: bigint) => void;
-  onOpenShop: () => void;
+  onOpenShop?: () => void; // shop hidden for now; prop kept for easy re-enable
   onOpenCollection: () => void;
 }) {
   const joinQueue = useReducer(reducers.joinQueue);
@@ -129,9 +128,10 @@ export default function Lobby({
             <button className="btn btn-ghost" onClick={() => playBot().catch(oops)}>
               🤖 Practice vs TimeKeeper
             </button>
+            {/* Shop hidden for now — re-enable by restoring this button:
             <button className="btn btn-ghost" onClick={onOpenShop}>
               🛒 Shop
-            </button>
+            </button> */}
             <button className="btn btn-ghost" onClick={onOpenCollection}>
               🃏 Cards & Loadouts
             </button>
