@@ -4,6 +4,7 @@ import { tables } from '../module_bindings';
 import BoardSvg from '../game/BoardSvg';
 import { accuracy, gradeMoves, START_SNAPSHOT, type Grade } from '../game/judge';
 import { piecesFromSnapshot } from '../game/snapshot';
+import { themeById } from '../game/themes';
 
 const GRADE_LABEL: Record<Grade, string> = {
   brilliant: '✨ Brilliant',
@@ -16,7 +17,10 @@ const GRADE_LABEL: Record<Grade, string> = {
 export default function ReplayScreen({ gameId, onBack }: { gameId: bigint; onBack: () => void }) {
   const [games] = useTable(tables.game.where((r) => r.gameId.eq(gameId)));
   const [moveRows] = useTable(tables.move_log.where((r) => r.gameId.eq(gameId)));
+  const [profiles] = useTable(tables.player_profile);
   const game = games[0];
+  const themeWhite = themeById(profiles.find((p) => game && p.accountId === game.whiteId)?.equippedSkin);
+  const themeBlack = themeById(profiles.find((p) => game && p.accountId === game.blackId)?.equippedSkin);
 
   const graded = useMemo(
     () =>
@@ -85,6 +89,8 @@ export default function ReplayScreen({ gameId, onBack }: { gameId: bigint; onBac
           serverNow={() => 0}
           onSquare={() => {}}
           frozen={false}
+          themeWhite={themeWhite}
+          themeBlack={themeBlack}
         />
         {current && (
           <div className={`grade-chip grade-${current.grade}`}>

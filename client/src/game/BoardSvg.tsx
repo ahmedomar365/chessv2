@@ -3,33 +3,45 @@ import type { Piece } from '../module_bindings/types';
 import { PieceGlyph } from './pieces';
 import { THEMES, type Theme } from './themes';
 
-/** Per-instance SVG gradient defs + CSS vars for a theme. */
-export function ThemeDefs({ theme, prefix }: { theme: Theme; prefix: string }) {
+/**
+ * League-style army skins: the WHITE army renders in the white player's
+ * theme, the BLACK army in the black player's theme. The board itself stays
+ * constant (Classic) so games always read cleanly.
+ */
+export function ArmyDefs({ white, black, prefix }: { white: Theme; black: Theme; prefix: string }) {
   return (
     <defs>
       <linearGradient id={`${prefix}-pw`} x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stopColor={theme.whiteFill} />
-        <stop offset="1" stopColor={theme.whiteFill2} />
+        <stop offset="0" stopColor={white.whiteFill} />
+        <stop offset="1" stopColor={white.whiteFill2} />
       </linearGradient>
       <linearGradient id={`${prefix}-pb`} x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0" stopColor={theme.blackFill} />
-        <stop offset="1" stopColor={theme.blackFill2} />
+        <stop offset="0" stopColor={black.blackFill} />
+        <stop offset="1" stopColor={black.blackFill2} />
       </linearGradient>
     </defs>
   );
 }
 
-export function themeVars(theme: Theme, prefix: string): React.CSSProperties {
+/** Piece-material vars only — board squares keep their Classic CSS defaults. */
+export function armyVars(white: Theme, black: Theme, prefix: string): React.CSSProperties {
   return {
+    ['--pw-fill' as string]: `url(#${prefix}-pw)`,
+    ['--pb-fill' as string]: `url(#${prefix}-pb)`,
+    ['--pw-stroke' as string]: white.whiteStroke,
+    ['--pb-stroke' as string]: black.blackStroke,
+    ['--pw-detail' as string]: white.whiteDetail,
+    ['--pb-detail' as string]: black.blackDetail,
+  };
+}
+
+/** Full theming incl. board — used by shop previews only. */
+export function previewVars(theme: Theme, prefix: string): React.CSSProperties {
+  return {
+    ...armyVars(theme, theme, prefix),
     ['--sq-light' as string]: theme.sqLight,
     ['--sq-dark' as string]: theme.sqDark,
     ['--sq-accent' as string]: theme.accent,
-    ['--pw-fill' as string]: `url(#${prefix}-pw)`,
-    ['--pb-fill' as string]: `url(#${prefix}-pb)`,
-    ['--pw-stroke' as string]: theme.whiteStroke,
-    ['--pb-stroke' as string]: theme.blackStroke,
-    ['--pw-detail' as string]: theme.whiteDetail,
-    ['--pb-detail' as string]: theme.blackDetail,
   };
 }
 
@@ -74,7 +86,10 @@ export interface BoardProps {
   /** squares whose pieces the local player may drag */
   draggable?: ReadonlySet<number>;
   frozen: boolean;
-  theme?: Theme;
+  /** the white player's equipped theme (their army's skin) */
+  themeWhite?: Theme;
+  /** the black player's equipped theme (their army's skin) */
+  themeBlack?: Theme;
 }
 
 const xyOf = (sq: number, flipped: boolean) => {
@@ -87,7 +102,8 @@ const xyOf = (sq: number, flipped: boolean) => {
 
 export default function BoardSvg(props: BoardProps) {
   const { pieces, flipped, selected, targets, cardTargets, flashes, lastMove, premove, checkSq, shakeSq, stasisIds, onSquare, onDrop, draggable, frozen } = props;
-  const theme = props.theme ?? THEMES[0];
+  const themeWhite = props.themeWhite ?? THEMES[0];
+  const themeBlack = props.themeBlack ?? THEMES[0];
   const svgRef = useRef<SVGSVGElement>(null);
   const [drag, setDrag] = useState<{ from: number; x: number; y: number; moved: boolean } | null>(null);
 
@@ -119,7 +135,7 @@ export default function BoardSvg(props: BoardProps) {
       ref={svgRef}
       className={`board ${frozen ? 'board-frozen' : ''}`}
       viewBox="0 0 800 800"
-      style={themeVars(theme, 'live')}
+      style={armyVars(themeWhite, themeBlack, 'live')}
       onPointerDown={(e) => {
         const sq = squareFromXY(e.clientX, e.clientY);
         if (sq === null) return;
@@ -145,7 +161,7 @@ export default function BoardSvg(props: BoardProps) {
       }}
       onPointerCancel={() => setDrag(null)}
     >
-      <ThemeDefs theme={theme} prefix="live" />
+      <ArmyDefs white={themeWhite} black={themeBlack} prefix="live" />
       {/* squares */}
       {Array.from({ length: 64 }, (_, sq) => {
         const { x, y } = xyOf(sq, flipped);

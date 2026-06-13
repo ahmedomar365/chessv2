@@ -166,18 +166,32 @@ function CrownPack({
   onDone: (msg: string) => void;
 }) {
   const holder = useRef<HTMLDivElement>(null);
+  const mounted = useRef(false);
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
+        if (mounted.current) return; // render the buttons exactly once
         if (!window.paypal) {
           const cfg = await fetch(`${PAY_BASE}/config`).then((r) => r.json());
           await new Promise<void>((resolve, reject) => {
             const existing = document.querySelector('script[data-paypal]');
             if (existing) {
-              resolve();
+              // another pack is already loading the SDK — wait for it
+              const poll = setInterval(() => {
+                if (window.paypal) {
+                  clearInterval(poll);
+                  resolve();
+                }
+              }, 100);
+              setTimeout(() => {
+                clearInterval(poll);
+                window.paypal ? resolve() : reject(new Error('paypal sdk timeout'));
+              }, 15_000);
               return;
             }
             const s = document.createElement('script');
@@ -188,8 +202,9 @@ function CrownPack({
             document.head.appendChild(s);
           });
         }
-        if (cancelled || !holder.current || !window.paypal) return;
-        window.paypal
+        if (cancelled || !holder.current || !window.paypal || mounted.current) return;
+        mounted.current = true;
+        await window.paypal
           .Buttons({
             style: { layout: 'horizontal', color: 'gold', height: 38, tagline: false },
             createOrder: async () => {
@@ -209,13 +224,13 @@ function CrownPack({
                 body: JSON.stringify({ orderId: data.orderID }),
               });
               const d = await r.json();
-              if (r.ok && d.ok) onDone(`✨ ${d.crowns} Crowns added!`);
-              else onDone('Payment could not be verified — contact support');
+              if (r.ok && d.ok) onDoneRef.current(`✨ ${d.crowns} Crowns added!`);
+              else onDoneRef.current('Payment could not be verified — contact support');
             },
-            onError: () => onDone('Payment cancelled or failed'),
+            onError: () => onDoneRef.current('Payment cancelled or failed'),
           })
           .render(holder.current);
-        setState('ready');
+        if (!cancelled) setState('ready');
       } catch {
         if (!cancelled) setState('error');
       }
@@ -223,7 +238,8 @@ function CrownPack({
     return () => {
       cancelled = true;
     };
-  }, [pack, accountId, onDone]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pack]);
 
   return (
     <div className="pack-card">

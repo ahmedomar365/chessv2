@@ -35,21 +35,21 @@ const GLYPHS: Record<PieceTy, ReactElement> = {
     </>
   ),
 
-  // ---- Knight: arched-neck horse ----
+  // ---- Knight: mustang transplanted from the 3D asset sets ----
   1: (
     <>
       {Base}
-      <path d="M36 77 C33 64 36 54 43 46 C49 40 52 33 50.5 25 L47.5 16 C46.8 13 49.5 11.5 52 13.5 L61 21 C72 24.5 78 34 78.5 46 C79 57 77.5 68 76.5 77 Z" />
-      {/* ears */}
-      <path d="M53 16 L59 6.5 C60.5 4.2 63.5 5.5 62.8 8 L60.5 19 Z" />
-      <path d="M61.5 19 L68.5 11.5 C70.3 9.7 72.8 11.5 71.5 13.8 L67 22.5 Z" />
-      {/* mane ridge */}
-      <path d="M50 25 C52 33 48.5 40 43.5 46.5 C38 53 35.5 62 36.8 73 L40.5 73 C39.5 63 41.8 55 46.8 49 C52.3 42.5 55.5 34 53.8 25.5 Z" className="p-sh" />
-      {/* muzzle + jaw shading */}
-      <path d="M48 15.5 L51.5 18.5 C50.8 22 50.5 24.5 50.5 25 L47.6 16.2 Z" className="p-hi" />
-      <path d="M71 30 C75.5 36 77.5 44 77.8 52 C78 60 77.2 69 76.6 76 L73 76 C73.8 67 74.4 58 74 50 C73.6 42.5 72.4 35.5 69 30.5 Z" className="p-sh" />
-      <circle cx="58.5" cy="29.5" r="2.7" className="p-eye" />
-      <path d="M46 19.5 C44.5 21.5 44 23.5 44.4 25.5" fill="none" strokeWidth="2" />
+      <path d="M76.4 77 L76.6 67 Q77.4 51.6 71.6 36.2 Q68.2 29.4 62 27.2 L58.7 17.2 C58.2 15.6 56.4 15.6 55.8 17.2 L53.3 24.9 L51.9 24.8 L48.8 14.7 C48.3 13.1 46.4 13.1 45.9 14.8 L43.6 26.4 L26.5 28.2 Q21.7 30.4 23.2 35.4 Q30.3 47.6 47.6 51.6 Q43.8 63.7 49.5 77 Z" />
+      {/* mouth, nostril, eye, cheek */}
+      <path d="M23.6 38 Q28 40.6 32.6 41.4" fill="none" strokeWidth="2" />
+      <circle cx="27.2" cy="33.2" r="1.7" className="p-eye" />
+      <path d="M41.5 31.6 a2.6 2 -15 1 0 0.1 0" className="p-eye" />
+      <path d="M37 45.5 Q44 42 47.8 35.5" fill="none" strokeWidth="2" opacity="0.4" />
+      {/* mane band down the crest */}
+      <path d="M62.5 28.5 Q67.4 32.8 69.6 39.6 Q71.8 48 71.4 58 Q71.2 67 70 75.5 L74.2 75.8 Q75.6 62.5 74.4 50.5 Q73.2 39.5 68.8 32.6 Q66.4 29.4 64.6 28.2 Z" className="p-sh" />
+      <path d="M62.5 28.5 Q67.4 32.8 69.6 39.6 Q71.8 48 71.4 58 Q71.2 67 70 75.5" fill="none" strokeWidth="2" opacity="0.5" />
+      {/* chest highlight */}
+      <path d="M46.2 53 Q44.4 62 47.6 73 L50.8 73 Q47.8 62.5 49.4 53.6 Z" className="p-hi" />
     </>
   ),
 

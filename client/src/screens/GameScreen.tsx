@@ -37,9 +37,11 @@ export default function GameScreen({
   const [cardRows] = useTable(tables.my_card_state);
   const [allSpectators] = useTable(tables.spectator);
   const [sessions] = useTable(tables.session);
-  const [myProfiles] = useTable(tables.player_profile.where((r) => r.accountId.eq(me.accountId)));
+  const [profiles] = useTable(tables.player_profile);
 
-  const theme = themeById(myProfiles[0]?.equippedSkin);
+  // League-style skins: each army wears its OWNER's equipped theme
+  const themeWhite = themeById(profiles.find((p) => p.accountId === game.whiteId)?.equippedSkin);
+  const themeBlack = themeById(profiles.find((p) => p.accountId === game.blackId)?.equippedSkin);
   const specCount = allSpectators.filter((s) => s.gameId === game.gameId).length;
   const [chatOpen, setChatOpen] = useState(false);
 
@@ -476,7 +478,8 @@ export default function GameScreen({
           onDrop={onDrop}
           draggable={draggable}
           frozen={myMated}
-          theme={theme}
+          themeWhite={themeWhite}
+          themeBlack={themeBlack}
         />
 
         {countLeft !== null && (
