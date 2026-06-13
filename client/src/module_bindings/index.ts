@@ -48,6 +48,7 @@ import LoginReducer from "./login_reducer";
 import LogoutReducer from "./logout_reducer";
 import MovePieceReducer from "./move_piece_reducer";
 import OfferDrawReducer from "./offer_draw_reducer";
+import PlayBotReducer from "./play_bot_reducer";
 import PlayCardReducer from "./play_card_reducer";
 import RegisterReducer from "./register_reducer";
 import ResignReducer from "./resign_reducer";
@@ -322,6 +323,7 @@ const reducersSchema = __reducers(
   __reducerSchema("logout", LogoutReducer),
   __reducerSchema("move_piece", MovePieceReducer),
   __reducerSchema("offer_draw", OfferDrawReducer),
+  __reducerSchema("play_bot", PlayBotReducer),
   __reducerSchema("play_card", PlayCardReducer),
   __reducerSchema("register", RegisterReducer),
   __reducerSchema("resign", ResignReducer),

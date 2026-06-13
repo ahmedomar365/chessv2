@@ -413,6 +413,7 @@ pub fn logout(ctx: &ReducerContext) {
 #[reducer(init)]
 pub fn init(ctx: &ReducerContext) {
     crate::economy::seed_skins(ctx);
+    crate::bot::ensure_bot_account(ctx);
 }
 
 #[reducer(client_connected)]

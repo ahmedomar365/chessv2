@@ -36,6 +36,13 @@ export const BoardSnapshot = __t.object("BoardSnapshot", {
 });
 export type BoardSnapshot = __Infer<typeof BoardSnapshot>;
 
+export const BotTimer = __t.object("BotTimer", {
+  scheduledId: __t.u64(),
+  scheduledAt: __t.scheduleAt(),
+  gameId: __t.u64(),
+});
+export type BotTimer = __Infer<typeof BotTimer>;
+
 export const CardOwnership = __t.object("CardOwnership", {
   id: __t.u64(),
   accountId: __t.u64(),
@@ -82,6 +89,13 @@ export const EffectLog = __t.object("EffectLog", {
   bSq: __t.u8(),
 });
 export type EffectLog = __Infer<typeof EffectLog>;
+
+export const FlaggedAccount = __t.object("FlaggedAccount", {
+  accountId: __t.u64(),
+  violations: __t.u32(),
+  lastTs: __t.timestamp(),
+});
+export type FlaggedAccount = __Infer<typeof FlaggedAccount>;
 
 export const ForfeitTimer = __t.object("ForfeitTimer", {
   scheduledId: __t.u64(),
@@ -158,6 +172,12 @@ export const MoveLog = __t.object("MoveLog", {
   boardAfter: __t.string(),
 });
 export type MoveLog = __Infer<typeof MoveLog>;
+
+export const MoveThrottle = __t.object("MoveThrottle", {
+  accountId: __t.u64(),
+  lastTs: __t.timestamp(),
+});
+export type MoveThrottle = __Infer<typeof MoveThrottle>;
 
 export const OperatorConfig = __t.object("OperatorConfig", {
   key: __t.u8(),

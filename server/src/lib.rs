@@ -4,6 +4,8 @@ pub mod elo;
 pub mod rules;
 
 #[cfg(target_arch = "wasm32")]
+mod bot;
+#[cfg(target_arch = "wasm32")]
 mod economy;
 #[cfg(target_arch = "wasm32")]
 mod game;

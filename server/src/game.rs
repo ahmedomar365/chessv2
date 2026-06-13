@@ -370,14 +370,70 @@ pub fn begin_game(ctx: &ReducerContext, timer: GameStartTimer) -> Result<(), Str
     Ok(())
 }
 
+/// PRIVATE — anti-automation: per-player minimum spacing between accepted moves.
+#[table(accessor = move_throttle)]
+pub struct MoveThrottle {
+    #[primary_key]
+    pub account_id: u64,
+    pub last_ts: Timestamp,
+}
+
+/// PRIVATE — accounts flagged for sustained superhuman input rates.
+#[table(accessor = flagged_account)]
+pub struct FlaggedAccount {
+    #[primary_key]
+    pub account_id: u64,
+    pub violations: u32,
+    pub last_ts: Timestamp,
+}
+
+const MIN_MOVE_SPACING_MICROS: i64 = 120_000;
+
 #[reducer]
 pub fn move_piece(ctx: &ReducerContext, game_id: u64, from_sq: u8, to_sq: u8) -> Result<(), String> {
     let s = logged_in(ctx)?;
+    // anti-automation spacing (humans only — generous for real play)
+    if let Some(t) = ctx.db.move_throttle().account_id().find(s.account_id) {
+        if ctx.timestamp.to_micros_since_unix_epoch() - t.last_ts.to_micros_since_unix_epoch()
+            < MIN_MOVE_SPACING_MICROS
+        {
+            let mut f = ctx.db.flagged_account().account_id().find(s.account_id).unwrap_or(FlaggedAccount {
+                account_id: s.account_id,
+                violations: 0,
+                last_ts: ctx.timestamp,
+            });
+            f.violations += 1;
+            f.last_ts = ctx.timestamp;
+            if ctx.db.flagged_account().account_id().find(s.account_id).is_some() {
+                ctx.db.flagged_account().account_id().update(f);
+            } else {
+                ctx.db.flagged_account().insert(f);
+            }
+            return Err("TOO_FAST".into());
+        }
+    }
+    let result = execute_move(ctx, game_id, s.account_id, from_sq, to_sq);
+    if result.is_ok() {
+        if ctx.db.move_throttle().account_id().find(s.account_id).is_some() {
+            ctx.db.move_throttle().account_id().update(MoveThrottle { account_id: s.account_id, last_ts: ctx.timestamp });
+        } else {
+            ctx.db.move_throttle().insert(MoveThrottle { account_id: s.account_id, last_ts: ctx.timestamp });
+        }
+    }
+    result
+}
+
+/// Bot path — called only from the scheduler-guarded bot_tick.
+pub fn bot_move(ctx: &ReducerContext, game_id: u64, account_id: u64, from_sq: u8, to_sq: u8) -> Result<(), String> {
+    execute_move(ctx, game_id, account_id, from_sq, to_sq)
+}
+
+fn execute_move(ctx: &ReducerContext, game_id: u64, account_id: u64, from_sq: u8, to_sq: u8) -> Result<(), String> {
     let game = ctx.db.game().game_id().find(game_id).ok_or("No such game")?;
     if game.phase != 1 {
         return Err("Game is not live".into());
     }
-    let my_color = color_of(&game, s.account_id)?;
+    let my_color = color_of(&game, account_id)?;
     let mated = if my_color == rules::Color::White { game.white_mated } else { game.black_mated };
     if mated {
         return Err("FROZEN_MATED".into());
@@ -422,7 +478,7 @@ pub fn move_piece(ctx: &ReducerContext, game_id: u64, from_sq: u8, to_sq: u8) ->
             return Ok(());
         }
         if victim.ty == 5 {
-            let defender_id = if game.white_id == s.account_id { game.black_id } else { game.white_id };
+            let defender_id = if game.white_id == account_id { game.black_id } else { game.white_id };
             if let Some(mut dcs) = ctx.db.game_card_state().game_id().filter(game_id)
                 .find(|c| c.account_id == defender_id)
             {
