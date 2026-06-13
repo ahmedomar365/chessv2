@@ -212,7 +212,7 @@ export default function BoardSvg(props: BoardProps) {
               className={`piece-slot ${shakeSq === p.sq ? 'piece-shake' : ''} ${dragging ? 'piece-dragging' : ''}`}
               style={{ transform: `translate(${x}px, ${y}px)` }}
             >
-              <PieceGlyph ty={p.ty} color={p.color} />
+              <PieceGlyph ty={p.ty} color={p.color} themeId={p.color === 0 ? themeWhite.id : themeBlack.id} />
               {p.shielded && <circle cx={50} cy={50} r={46} className="shield-bubble" />}
               {inStasis && (
                 <g className="stasis-crystal">

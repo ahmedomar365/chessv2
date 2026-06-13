@@ -9,15 +9,7 @@ import type { ReactElement } from 'react';
 
 export type PieceTy = 0 | 1 | 2 | 3 | 4 | 5; // pawn knight bishop rook queen king
 
-/** shared plinth — two stacked discs with a top face */
-const Base = (
-  <>
-    <ellipse cx="50" cy="86" rx="26" ry="7.5" />
-    <ellipse cx="50" cy="82.5" rx="26" ry="7.5" className="p-top" />
-    <ellipse cx="50" cy="79" rx="19" ry="5.5" />
-    <ellipse cx="50" cy="76.5" rx="19" ry="5.5" className="p-top" />
-  </>
-);
+import { Base } from './glyphParts';
 
 const GLYPHS: Record<PieceTy, ReactElement> = {
   // ---- Pawn: sphere on a turned stem ----
@@ -130,7 +122,11 @@ const GLYPHS: Record<PieceTy, ReactElement> = {
   ),
 };
 
-export function PieceGlyph({ ty, color }: { ty: number; color: number }) {
+import { THEME_GLYPHS } from './themeGlyphs';
+
+export function PieceGlyph({ ty, color, themeId = 0 }: { ty: number; color: number; themeId?: number }) {
   const cls = color === 0 ? 'piece-white' : 'piece-black';
-  return <g className={`piece-glyph ${cls}`}>{GLYPHS[(ty > 5 ? 5 : ty) as PieceTy]}</g>;
+  const t = (ty > 5 ? 5 : ty) as PieceTy;
+  const glyph = THEME_GLYPHS[themeId]?.[t] ?? GLYPHS[t];
+  return <g className={`piece-glyph ${cls}`}>{glyph}</g>;
 }
