@@ -40,6 +40,7 @@ import BuySkinReducer from "./buy_skin_reducer";
 import CreateChallengeReducer from "./create_challenge_reducer";
 import DeclineChallengeReducer from "./decline_challenge_reducer";
 import DeleteLoadoutReducer from "./delete_loadout_reducer";
+import EnterReducer from "./enter_reducer";
 import EquipSkinReducer from "./equip_skin_reducer";
 import GrantPurchaseReducer from "./grant_purchase_reducer";
 import JoinQueueReducer from "./join_queue_reducer";
@@ -74,6 +75,7 @@ import MyLoadoutsRow from "./my_loadouts_table";
 import MySkinsRow from "./my_skins_table";
 import MyWalletRow from "./my_wallet_table";
 import PieceRow from "./piece_table";
+import PieceStatusRow from "./piece_status_table";
 import PlayerProfileRow from "./player_profile_table";
 import QueueEntryRow from "./queue_entry_table";
 import RatingHistoryRow from "./rating_history_table";
@@ -192,6 +194,20 @@ const tablesSchema = __schema({
       { name: 'piece_piece_id_key', constraint: 'unique', columns: ['pieceId'] },
     ],
   }, PieceRow),
+  piece_status: __table({
+    name: 'piece_status',
+    indexes: [
+      { accessor: 'game_id', name: 'piece_status_game_id_idx_btree', algorithm: 'btree', columns: [
+        'gameId',
+      ] },
+      { accessor: 'piece_id', name: 'piece_status_piece_id_idx_btree', algorithm: 'btree', columns: [
+        'pieceId',
+      ] },
+    ],
+    constraints: [
+      { name: 'piece_status_piece_id_key', constraint: 'unique', columns: ['pieceId'] },
+    ],
+  }, PieceStatusRow),
   player_profile: __table({
     name: 'player_profile',
     indexes: [
@@ -315,6 +331,7 @@ const reducersSchema = __reducers(
   __reducerSchema("create_challenge", CreateChallengeReducer),
   __reducerSchema("decline_challenge", DeclineChallengeReducer),
   __reducerSchema("delete_loadout", DeleteLoadoutReducer),
+  __reducerSchema("enter", EnterReducer),
   __reducerSchema("equip_skin", EquipSkinReducer),
   __reducerSchema("grant_purchase", GrantPurchaseReducer),
   __reducerSchema("join_queue", JoinQueueReducer),

@@ -11,8 +11,15 @@ pub const CARD_FREEZE: u8 = 4;
 pub const CARD_PAWN_STORM: u8 = 5;
 pub const CARD_SWAP: u8 = 6;
 pub const CARD_TIME_THEFT: u8 = 7;
+pub const CARD_REVIVE: u8 = 8;
+pub const CARD_DUPLICATE: u8 = 9;
+pub const CARD_OVERCLOCK: u8 = 10;
+pub const CARD_STASIS: u8 = 11;
 
+/// Default starter loadout (deck size 8).
 pub const DECK: [u8; 8] = [0, 1, 2, 3, 4, 5, 6, 7];
+/// Every card in the game (collection).
+pub const ALL_CARDS: [u8; 12] = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 pub const HAND_SIZE: usize = 3;
 
 /// Gem cost per card. Guardian is passive (255 = unplayable).
@@ -26,6 +33,10 @@ pub fn cost_of(card: u8) -> u8 {
         CARD_PAWN_STORM => 4,
         CARD_SWAP => 4,
         CARD_TIME_THEFT => 3,
+        CARD_REVIVE => 5,
+        CARD_DUPLICATE => 4,
+        CARD_OVERCLOCK => 4,
+        CARD_STASIS => 4,
         _ => 255,
     }
 }

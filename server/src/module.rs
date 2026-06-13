@@ -169,6 +169,18 @@ pub struct GameCardState {
     pub discard: Vec<u8>,
 }
 
+/// Status effects on pieces (Stasis etc.) — separate table so the live
+/// `piece` schema stays migration-compatible.
+#[table(accessor = piece_status, public)]
+pub struct PieceStatus {
+    #[primary_key]
+    pub piece_id: u64,
+    #[index(btree)]
+    pub game_id: u64,
+    /// locked & untouchable until this time
+    pub stasis_until: Timestamp,
+}
+
 /// Public play-by-play of card plays and effects — powers animations,
 /// opponent notifications, and spectators. Never reveals hands.
 #[table(accessor = effect_log, public)]
@@ -291,6 +303,7 @@ pub fn snapshot_string(board: &Board) -> String {
 // ---------------- auth ----------------
 
 fn bind_session(ctx: &ReducerContext, account_id: u64, username: &str) {
+    crate::economy::backfill_collection(ctx, account_id);
     if let Some(mut s) = ctx.db.session().identity().find(ctx.sender()) {
         s.account_id = account_id;
         s.username = username.to_string();
@@ -373,6 +386,18 @@ pub fn register(ctx: &ReducerContext, username: String, password: String) -> Res
     crate::economy::seed_new_account(ctx, acc.account_id);
     bind_session(ctx, acc.account_id, &username);
     Ok(())
+}
+
+/// One-button auth: logs in when the account exists (password must match),
+/// otherwise creates the account. No password recovery exists.
+#[reducer]
+pub fn enter(ctx: &ReducerContext, username: String, password: String) -> Result<(), String> {
+    check_throttle(ctx)?;
+    if ctx.db.account().username_lower().find(username.to_lowercase()).is_some() {
+        login(ctx, username, password)
+    } else {
+        register(ctx, username, password)
+    }
 }
 
 /// Login NEVER creates an account, and there is no password recovery.

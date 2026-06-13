@@ -84,6 +84,12 @@ fn account_is_online(ctx: &ReducerContext, account_id: u64) -> bool {
     ctx.db.session().account_id().filter(account_id).any(|s| s.online)
 }
 
+fn in_stasis(ctx: &ReducerContext, piece_id: u64) -> bool {
+    ctx.db.piece_status().piece_id().find(piece_id)
+        .map(|s| s.stasis_until > ctx.timestamp)
+        .unwrap_or(false)
+}
+
 fn finish_game(ctx: &ReducerContext, game_id: u64, result: u8, reason: u8) {
     if let Some(mut g) = ctx.db.game().game_id().find(game_id) {
         if g.phase == 2 {
@@ -131,6 +137,10 @@ fn finish_game(ctx: &ReducerContext, game_id: u64, result: u8, reason: u8) {
         let gems: Vec<u64> = ctx.db.game_gems().game_id().filter(game_id).map(|s| s.id).collect();
         for id in gems {
             ctx.db.game_gems().id().delete(id);
+        }
+        let statuses: Vec<u64> = ctx.db.piece_status().game_id().filter(game_id).map(|s| s.piece_id).collect();
+        for id in statuses {
+            ctx.db.piece_status().piece_id().delete(id);
         }
         // spectators intentionally stay: they see the result screen and
         // leave via stop_spectating (or disconnect cleanup).
@@ -448,6 +458,9 @@ fn execute_move(ctx: &ReducerContext, game_id: u64, account_id: u64, from_sq: u8
     if piece_row.cooldown_until > ctx.timestamp {
         return Err("COOLDOWN".into());
     }
+    if in_stasis(ctx, piece_row.piece_id) {
+        return Err("STASIS".into());
+    }
 
     let board = board_of(ctx, game_id);
     let outcome = rules::is_legal_move(&board, from_sq, to_sq, my_color).map_err(|e| format!("{e:?}"))?;
@@ -467,6 +480,9 @@ fn execute_move(ctx: &ReducerContext, game_id: u64, account_id: u64, from_sq: u8
         let victim = ctx.db.piece().game_id().filter(game_id)
             .find(|p| p.sq == cs)
             .ok_or("Victim piece missing")?;
+        if in_stasis(ctx, victim.piece_id) {
+            return Err("Target is locked in stasis".into());
+        }
         if victim.shielded {
             let mut v = victim;
             v.shielded = false;
@@ -501,6 +517,7 @@ fn execute_move(ctx: &ReducerContext, game_id: u64, account_id: u64, from_sq: u8
     // Apply to tables.
     if let Some(cs) = outcome.captured_sq {
         if let Some(victim) = ctx.db.piece().game_id().filter(game_id).find(|p| p.sq == cs) {
+            ctx.db.piece_status().piece_id().delete(victim.piece_id);
             ctx.db.piece().piece_id().delete(victim.piece_id);
         }
     }
@@ -580,12 +597,13 @@ fn rewind_board(ctx: &ReducerContext, game_id: u64) -> Result<(), String> {
     let target = snaps
         .iter()
         .filter(|s| s.ts.to_micros_since_unix_epoch() <= cutoff)
-        .max_by_key(|s| s.seq)
-        .or_else(|| snaps.iter().min_by_key(|s| s.seq))
+        .max_by_key(|s| (s.ts.to_micros_since_unix_epoch(), s.id))
+        .or_else(|| snaps.iter().min_by_key(|s| s.id))
         .ok_or("No snapshot available")?;
 
     let ids: Vec<u64> = ctx.db.piece().game_id().filter(game_id).map(|p| p.piece_id).collect();
     for id in ids {
+        ctx.db.piece_status().piece_id().delete(id);
         ctx.db.piece().piece_id().delete(id);
     }
     let ready = ctx.timestamp + TimeDuration::from_micros(3_000_000);
@@ -701,6 +719,9 @@ pub fn play_card(ctx: &ReducerContext, game_id: u64, hand_index: u8, target_a: u
             if a.cooldown_until > ctx.timestamp || b.cooldown_until > ctx.timestamp {
                 return Err("Both pieces must be ready".into());
             }
+            if in_stasis(ctx, a.piece_id) || in_stasis(ctx, b.piece_id) {
+                return Err("A piece is locked in stasis".into());
+            }
             let mut sim = board_of(ctx, game_id);
             for p in sim.pieces.iter_mut() {
                 if p.sq == target_a {
@@ -723,6 +744,98 @@ pub fn play_card(ctx: &ReducerContext, game_id: u64, hand_index: u8, target_a: u
             ctx.db.piece().piece_id().update(b);
             board_changed = true;
             log_effect(ctx, game_id, 7, my_u8, card, target_a, target_b);
+        }
+        cards::CARD_REVIVE => {
+            // most recently lost piece (a capture made by the opponent)
+            let opp_u8 = 1 - my_u8;
+            let lost_ty = ctx.db.move_log().game_id().filter(game_id)
+                .filter(|m| m.color == opp_u8 && m.captured_ty != 255 && m.captured_ty != 5)
+                .max_by_key(|m| m.seq)
+                .map(|m| m.captured_ty)
+                .ok_or("You haven't lost a piece yet")?;
+            if ctx.db.piece().game_id().filter(game_id).any(|p| p.sq == target_a) {
+                return Err("Pick an empty square".into());
+            }
+            let r = rules::rank(target_a);
+            let home = if my_u8 == 0 { r <= 1 } else { r >= 6 };
+            if !home {
+                return Err("Revive only works on your two home ranks".into());
+            }
+            ctx.db.piece().insert(Piece {
+                piece_id: 0,
+                game_id,
+                ty: lost_ty,
+                color: my_u8,
+                sq: target_a,
+                has_moved: true,
+                cooldown_until: ctx.timestamp + TimeDuration::from_micros(5_000_000),
+                shielded: false,
+            });
+            board_changed = true;
+            log_effect(ctx, game_id, 10, my_u8, card, target_a, lost_ty);
+        }
+        cards::CARD_DUPLICATE => {
+            let src = own_piece_at(ctx, game_id, target_a, my_u8)?;
+            if src.ty != 0 {
+                return Err("Only pawns can be duplicated".into());
+            }
+            // first empty adjacent square: behind, left, right, ahead
+            let dir: i8 = if my_u8 == 0 { -1 } else { 1 };
+            let f = rules::file(target_a);
+            let r = rules::rank(target_a);
+            let candidates = [(0i8, dir), (-1, 0), (1, 0), (0, -dir)];
+            let spot = candidates.iter().find_map(|(df, dr)| {
+                let nf = f + df;
+                let nr = r + dr;
+                if !(0..8).contains(&nf) || !(0..8).contains(&nr) {
+                    return None;
+                }
+                let sq = (nr * 8 + nf) as u8;
+                if ctx.db.piece().game_id().filter(game_id).any(|p| p.sq == sq) {
+                    None
+                } else {
+                    Some(sq)
+                }
+            }).ok_or("No empty square next to that pawn")?;
+            ctx.db.piece().insert(Piece {
+                piece_id: 0,
+                game_id,
+                ty: 0,
+                color: my_u8,
+                sq: spot,
+                has_moved: true,
+                cooldown_until: ctx.timestamp + TimeDuration::from_micros(3_000_000),
+                shielded: false,
+            });
+            board_changed = true;
+            log_effect(ctx, game_id, 11, my_u8, card, target_a, spot);
+        }
+        cards::CARD_OVERCLOCK => {
+            let cooling: Vec<Piece> = ctx.db.piece().game_id().filter(game_id)
+                .filter(|p| p.color == my_u8 && p.cooldown_until > ctx.timestamp)
+                .collect();
+            if cooling.is_empty() {
+                return Err("Nothing is cooling down".into());
+            }
+            for mut p in cooling {
+                let remaining = p.cooldown_until.to_micros_since_unix_epoch()
+                    - ctx.timestamp.to_micros_since_unix_epoch();
+                p.cooldown_until = ctx.timestamp + TimeDuration::from_micros(remaining / 2);
+                ctx.db.piece().piece_id().update(p);
+            }
+            log_effect(ctx, game_id, 12, my_u8, card, 255, 255);
+        }
+        cards::CARD_STASIS => {
+            let p = ctx.db.piece().game_id().filter(game_id)
+                .find(|p| p.sq == target_a)
+                .ok_or("No piece there")?;
+            let until = ctx.timestamp + TimeDuration::from_micros(8_000_000);
+            if ctx.db.piece_status().piece_id().find(p.piece_id).is_some() {
+                ctx.db.piece_status().piece_id().update(PieceStatus { piece_id: p.piece_id, game_id, stasis_until: until });
+            } else {
+                ctx.db.piece_status().insert(PieceStatus { piece_id: p.piece_id, game_id, stasis_until: until });
+            }
+            log_effect(ctx, game_id, 13, my_u8, card, target_a, 255);
         }
         cards::CARD_TIME_THEFT => {
             let opp_id = if game.white_id == s.account_id { game.black_id } else { game.white_id };

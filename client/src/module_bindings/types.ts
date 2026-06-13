@@ -197,6 +197,13 @@ export const Piece = __t.object("Piece", {
 });
 export type Piece = __Infer<typeof Piece>;
 
+export const PieceStatus = __t.object("PieceStatus", {
+  pieceId: __t.u64(),
+  gameId: __t.u64(),
+  stasisUntil: __t.timestamp(),
+});
+export type PieceStatus = __Infer<typeof PieceStatus>;
+
 export const PlayerProfile = __t.object("PlayerProfile", {
   accountId: __t.u64(),
   username: __t.string(),

@@ -135,7 +135,7 @@ fn my_skins(ctx: &ViewContext) -> Vec<SkinOwnership> {
 /// Called from register(): starter collection, wallet, loadout.
 pub fn seed_new_account(ctx: &ReducerContext, account_id: u64) {
     ctx.db.wallet().insert(Wallet { account_id, coins: 0, crowns: 0 });
-    for card_id in cards::DECK {
+    for card_id in cards::ALL_CARDS {
         ctx.db.card_ownership().insert(CardOwnership { id: 0, account_id, card_id, copies: 1 });
     }
     ctx.db.loadout().insert(Loadout {
@@ -145,6 +145,17 @@ pub fn seed_new_account(ctx: &ReducerContext, account_id: u64) {
         cards: cards::DECK.to_vec(),
         active: true,
     });
+}
+
+/// Grants 1 copy of any card released after the account was created.
+/// Idempotent — called on every session bind.
+pub fn backfill_collection(ctx: &ReducerContext, account_id: u64) {
+    for card_id in cards::ALL_CARDS {
+        let has = ctx.db.card_ownership().account_id().filter(account_id).any(|c| c.card_id == card_id);
+        if !has {
+            ctx.db.card_ownership().insert(CardOwnership { id: 0, account_id, card_id, copies: 1 });
+        }
+    }
 }
 
 /// Called from init(): the 13-theme catalog. Free: Classic, Safari, Cowboy.
@@ -235,7 +246,7 @@ pub fn save_loadout(ctx: &ReducerContext, loadout_id: u64, name: String, deck: V
         return Err("Loadout name must be 1-24 characters".into());
     }
     // per-card count must not exceed owned copies
-    for card_id in cards::DECK {
+    for card_id in cards::ALL_CARDS {
         let used = deck.iter().filter(|&&c| c == card_id).count() as u8;
         if used == 0 {
             continue;
@@ -248,7 +259,7 @@ pub fn save_loadout(ctx: &ReducerContext, loadout_id: u64, name: String, deck: V
             return Err("You don't own enough copies of a card in this deck".into());
         }
     }
-    if deck.iter().any(|c| !cards::DECK.contains(c)) {
+    if deck.iter().any(|c| !cards::ALL_CARDS.contains(c)) {
         return Err("Unknown card in deck".into());
     }
     if loadout_id == 0 {
