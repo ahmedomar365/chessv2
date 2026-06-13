@@ -6,12 +6,8 @@ import BoardSvg, { type Flash } from '../game/BoardSvg';
 import { CardHand, GemMeter } from '../game/CardHand';
 import { CARDS, gemsNow } from '../game/cardsMeta';
 import { legalTargets, isLegal, type LPiece } from '../game/legal';
-import { piecesFromSnapshot } from '../game/snapshot';
 import { themeById } from '../game/themes';
 import ChatPanel from '../components/ChatPanel';
-
-/** Spectators watch on a delay to prevent ghosting. */
-const SPECTATE_DELAY_MS = 15_000;
 
 export default function GameScreen({
   game,
@@ -58,22 +54,9 @@ export default function GameScreen({
   }, [moves.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const serverNow = useCallback(() => Date.now() + offsetRef.current, []);
 
-  // ---- delayed board for spectators (anti-ghosting) ----
-  const [tick, setTick] = useState(0);
-  useEffect(() => {
-    if (!spectating) return;
-    const id = setInterval(() => setTick((t) => t + 1), 1000);
-    return () => clearInterval(id);
-  }, [spectating]);
-  const pieces = useMemo(() => {
-    if (!spectating || game.phase === 2) return livePieces;
-    void tick;
-    const cutoff = serverNow() - SPECTATE_DELAY_MS;
-    const past = moves.filter((m) => Number(m.ts.toMillis()) <= cutoff);
-    if (past.length === 0) return piecesFromSnapshot('RNBQKBNRPPPPPPPP' + '.'.repeat(32) + 'pppppppprnbqkbnr', game.gameId);
-    const latest = past.reduce((a, b) => (a.seq > b.seq ? a : b));
-    return piecesFromSnapshot(latest.boardAfter, game.gameId);
-  }, [spectating, game.phase, game.gameId, livePieces, moves, tick, serverNow]);
+  // Spectators watch live — both players already see the full board in real
+  // time, and hands stay private, so there's nothing a watcher could leak.
+  const pieces = livePieces;
 
   // ---- cards & gems ----
   const myCardState = useMemo(
@@ -277,16 +260,9 @@ export default function GameScreen({
 
   const lastMove = useMemo(() => {
     if (moves.length === 0) return null;
-    if (spectating) {
-      const cutoff = serverNow() - SPECTATE_DELAY_MS;
-      const past = moves.filter((m) => Number(m.ts.toMillis()) <= cutoff);
-      if (past.length === 0) return null;
-      const latest = past.reduce((a, b) => (a.seq > b.seq ? a : b));
-      return { from: latest.fromSq, to: latest.toSq };
-    }
     const latest = moves.reduce((a, b) => (a.seq > b.seq ? a : b));
     return { from: latest.fromSq, to: latest.toSq };
-  }, [moves, spectating, serverNow, tick]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [moves]);
 
   // ---- moving: tap, drag, premove ----
   const attemptMove = useCallback(
@@ -413,7 +389,7 @@ export default function GameScreen({
           {spectating ? (
             <>
               {game.whiteName} <em className="vs-dim">vs</em> {game.blackName}
-              <span className="badge badge-dim">delayed 15s</span>
+              <span className="badge badge-dim">LIVE</span>
             </>
           ) : (
             <>
