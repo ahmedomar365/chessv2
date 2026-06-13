@@ -158,33 +158,53 @@ pub fn backfill_collection(ctx: &ReducerContext, account_id: u64) {
     }
 }
 
-/// Called from init(): the 13-theme catalog. Free: Classic, Safari, Cowboy.
+/// Skin catalog (id, name, free, price). Variants (shared sculpts, new
+/// materials) are priced lower than full skins. Idempotent.
 pub fn seed_skins(ctx: &ReducerContext) {
-    let themes: [(&str, bool); 13] = [
-        ("Classic", true),
-        ("Safari", true),
-        ("Cowboy", true),
-        ("Haunted Halloween", false),
-        ("Deep Ocean", false),
-        ("Inferno", false),
-        ("Frostbite", false),
-        ("Cyber Neon", false),
-        ("Royal Gold", false),
-        ("Elven Forest", false),
-        ("Galaxy", false),
-        ("Candyland", false),
-        ("Samurai", false),
+    let themes: [(&str, bool, u64); 21] = [
+        ("Classic", true, 0),
+        ("Safari", true, 0),
+        ("Cowboy", true, 0),
+        ("Haunted Halloween", false, 100),
+        ("Deep Ocean", false, 100),
+        ("Inferno", false, 100),
+        ("Frostbite", false, 100),
+        ("Cyber Neon", false, 100),
+        ("Royal Gold", false, 100),
+        ("Elven Forest", false, 100),
+        ("Galaxy", false, 100),
+        ("Candyland", false, 100),
+        ("Samurai", false, 100),
+        ("Steampunk", false, 100),
+        ("Pirate", false, 100),
+        ("Pharaoh", false, 100),
+        ("Emerald Dragon", false, 100),
+        ("Royal Obsidian", false, 60),
+        ("Sakura", false, 60),
+        ("Abyss", false, 60),
+        ("Blood Moon", false, 60),
     ];
-    for (i, (name, free)) in themes.iter().enumerate() {
+    for (i, (name, free, price)) in themes.iter().enumerate() {
         if ctx.db.skin_catalog().skin_id().find(i as u8).is_none() {
             ctx.db.skin_catalog().insert(SkinCatalog {
                 skin_id: i as u8,
                 name: name.to_string(),
                 free: *free,
-                price_crowns: if *free { 0 } else { SKIN_CROWNS },
+                price_crowns: *price,
             });
         }
     }
+}
+
+/// ADMIN ONLY: seed any newly released skins into the live catalog.
+#[reducer]
+pub fn reseed_skins(ctx: &ReducerContext) -> Result<(), String> {
+    let admin = Identity::from_hex(ADMIN_HEX).map_err(|_| "bad admin constant")?;
+    if ctx.sender() != admin {
+        return Err("Forbidden".into());
+    }
+    seed_skins(ctx);
+    Ok(())
 }
 
 /// Coin rewards on game end (rated or not — playing earns).

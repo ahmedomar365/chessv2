@@ -1012,6 +1012,367 @@ const samurai: GlyphSet = {
   ),
 };
 
+/* ============================ 13 · STEAMPUNK ============================ */
+
+const steampunk: GlyphSet = {
+  // gear pawn
+  0: (
+    <>
+      {Base}
+      <path d="M41 74 Q39 67 43 63 L57 63 Q61 67 59 74 Z" />
+      <path d="M47 24 L53 24 L54 29 L59 31 L63.5 28 L67 33.5 L63.5 37 L64 42 L68 45 L65 51 L60 50 L56.5 54 L57 59 L51 61 L48 56.5 L43 56 L39.5 60 L34.5 56 L36.5 51 L33.5 47 L28.5 47 L28 41 L33 39.5 L34.5 34.5 L31.5 30.5 L36 26.5 L40.5 29.5 L45.5 28 Z" />
+      <circle cx="48" cy="42" r="7" className="p-eye" />
+      <circle cx="48" cy="42" r="3" className="p-hi" />
+    </>
+  ),
+  // clocktower rook
+  3: (
+    <>
+      {Base}
+      <path d="M39 74 L41 34 L37 34 L50 20 L63 34 L59 34 L61 74 Z" />
+      <circle cx="50" cy="44" r="8.5" />
+      <circle cx="50" cy="44" r="6.5" className="p-eye" />
+      <path d="M50 44 L50 39.5 M50 44 L53.5 46" fill="none" strokeWidth="2" />
+      <path d="M46 60 Q46 56 50 55.5 Q54 56 54 60 L54 68 L46 68 Z" className="p-eye" />
+      <path d="M43 35 L41.6 72 L44.8 72 L45.8 35 Z" className="p-hi" />
+    </>
+  ),
+  // brass automaton steed
+  1: (
+    <>
+      {Base}
+      <g transform="translate(-6 0)">
+        <path d="M76.4 77 L76.6 67 Q77.4 51.6 71.6 36.2 Q68.2 29.4 62 27.2 L58.7 17.2 C58.2 15.6 56.4 15.6 55.8 17.2 L53.3 24.9 L51.9 24.8 L48.8 14.7 C48.3 13.1 46.4 13.1 45.9 14.8 L43.6 26.4 L26.5 28.2 Q21.7 30.4 23.2 35.4 Q30.3 47.6 47.6 51.6 Q43.8 63.7 49.5 77 Z" />
+        {/* goggle eye */}
+        <circle cx="41.5" cy="31.6" r="4.6" fill="none" strokeWidth="2.6" />
+        <circle cx="41.5" cy="31.6" r="1.8" className="p-eye" />
+        {/* rivets + plate seam */}
+        <circle cx="55" cy="38" r="1.4" className="p-eye" />
+        <circle cx="59" cy="48" r="1.4" className="p-eye" />
+        <circle cx="61" cy="58" r="1.4" className="p-eye" />
+        <circle cx="62" cy="68" r="1.4" className="p-eye" />
+        <path d="M49 51 Q56 56 60 64" fill="none" strokeWidth="2" opacity="0.5" />
+        <path d="M23.6 38 Q28 40.6 32.6 41.4" fill="none" strokeWidth="2" />
+        <path d="M62.5 28.5 Q67.4 32.8 69.6 39.6 Q71.8 48 71.4 58 Q71.2 67 70 75.5 L74.2 75.8 Q75.6 62.5 74.4 50.5 Q73.2 39.5 68.8 32.6 Q66.4 29.4 64.6 28.2 Z" className="p-sh" />
+      </g>
+    </>
+  ),
+  // pressure-gauge bishop
+  2: (
+    <>
+      {Base}
+      <path d="M43 74 Q45 68 44.5 62 L55.5 62 Q55 68 57 74 Z" />
+      <path d="M44 62 L44 34 Q44 26 50 24 Q56 26 56 34 L56 62 Z" />
+      <circle cx="50" cy="38" r="7.5" />
+      <circle cx="50" cy="38" r="5.5" className="p-eye" />
+      <path d="M50 38 L46.5 34.5" fill="none" strokeWidth="2" />
+      <path d="M46 50 h8 v3 h-8 z" className="p-band" />
+      <path d="M50 24 L50 16 M46 16 L54 16" fill="none" strokeWidth="2.6" />
+      <circle cx="50" cy="13" r="2.6" />
+      <path d="M46 34 Q45.4 48 46 60 L48 60 Q47.6 48 48 33 Z" className="p-hi" />
+    </>
+  ),
+  // cog-crown queen
+  4: (
+    <>
+      {Base}
+      <path d="M40 77 C38.5 71 41 66.5 42.5 61 L57.5 61 C59 66.5 61.5 71 60 77 Z" />
+      <path d="M50 26 C57 26 62.5 28.5 64.5 33 L60 56 C59 60 55.5 62 50 62 C44.5 62 41 60 40 56 L35.5 33 C37.5 28.5 43 26 50 26 Z" />
+      {/* half-cog crown */}
+      <path d="M36 26 L36 19 L40 19 L40 13.5 L45 13.5 L45 8.5 L50 8.5 L55 8.5 L55 13.5 L60 13.5 L60 19 L64 19 L64 26 Q57 29.5 50 29.5 Q43 29.5 36 26 Z" />
+      <circle cx="50" cy="19" r="4.4" className="p-eye" />
+      <circle cx="50" cy="19" r="1.8" className="p-hi" />
+      <path d="M41 32 L44.5 56 Q45.2 59.5 47.5 61 Q44 60 43 56 L39 33 Z" className="p-hi" />
+    </>
+  ),
+  // top-hat gear king
+  5: (
+    <>
+      {Base}
+      <path d="M40 77 C38.5 71 41 66.5 42.5 61 L57.5 61 C59 66.5 61.5 71 60 77 Z" />
+      <path d="M50 30 C58 30 64 33 65.5 38 L60 56 C59 60 55.5 62 50 62 C44.5 62 41 60 40 56 L34.5 38 C36 33 42 30 50 30 Z" />
+      {/* top hat */}
+      <path d="M35 28 Q35 25.6 38.5 25.4 L61.5 25.4 Q65 25.6 65 28 Q57 31 50 31 Q43 31 35 28 Z" />
+      <path d="M41 25.4 L41.8 8.5 L58.2 8.5 L59 25.4 Z" />
+      <path d="M41.4 17 h17.2 v4 h-17.2 z" className="p-band" />
+      {/* pocketwatch */}
+      <circle cx="50" cy="44" r="5.4" fill="none" strokeWidth="2.4" />
+      <path d="M50 44 L50 40.8 M50 44 L52.4 45.4" fill="none" strokeWidth="1.8" />
+      <path d="M43.5 9.5 L42.8 24 L45.6 24 L46.2 9.5 Z" className="p-hi" />
+    </>
+  ),
+};
+
+/* ============================= 14 · PIRATE ============================= */
+
+const pirate: GlyphSet = {
+  // cannonball with lit fuse
+  0: (
+    <>
+      {Base}
+      <path d="M40 74 Q38 68 42 64 L58 64 Q62 68 60 74 Z" />
+      <circle cx="50" cy="47" r="15.5" />
+      <path d="M52 32 Q54 26 51 21" fill="none" strokeWidth="2.6" />
+      <path d="M51 21 L54 16.5 L55.5 21 L51.8 23 Z" />
+      <circle cx="44.5" cy="41.5" r="4.6" className="p-hi" />
+      <path d="M60 38 A15.5 15.5 0 0 1 60 56 A20 20 0 0 0 60 38 Z" className="p-sh" />
+    </>
+  ),
+  // stern-castle rook
+  3: (
+    <>
+      {Base}
+      <path d="M37 74 L40 40 L36 40 L38 24 L44 26 L44 20 L50 23 L56 20 L56 26 L62 24 L64 40 L60 40 L63 74 Z" />
+      {/* lantern */}
+      <path d="M46 28 Q46 25 50 24.8 Q54 25 54 28 L54 33 L46 33 Z" className="p-eye" />
+      {/* stern windows */}
+      <circle cx="44" cy="50" r="2.6" className="p-eye" />
+      <circle cx="50" cy="50" r="2.6" className="p-eye" />
+      <circle cx="56" cy="50" r="2.6" className="p-eye" />
+      <path d="M40 58 Q50 62 60 58 M40.5 66 Q50 70 59.5 66" fill="none" strokeWidth="2" opacity="0.55" />
+      <path d="M42 41 L39.6 72 L43 72 L44.8 41 Z" className="p-hi" />
+    </>
+  ),
+  // parrot knight
+  1: (
+    <>
+      {Base}
+      <path d="M42 77 Q39 66 40 54 Q41 42 47 34 Q43 33 40.5 30 Q37.5 26 38.5 21.5 Q43 19 47.5 20 Q50 13 58 11.5 Q66 10.5 70 16 Q73.5 21 71.5 28 Q75 34 74.5 42 Q74 54 68 63 Q63 71 56 74 Q58 75.8 57 77 Z" />
+      {/* hooked beak */}
+      <path d="M38.5 21.5 Q31 22 28 27 Q33 30.5 39 28.5 Q37.5 25 38.5 21.5 Z" />
+      <path d="M28 27 Q30 31.5 35 32 Q33 29.5 32.5 27.6 Z" className="p-sh" />
+      <circle cx="52" cy="21" r="2.8" className="p-eye" />
+      {/* wing */}
+      <path d="M52 40 Q62 38 67 44 Q64 47 58 47 Q64 49 66 54 Q61 56 56 53 Q60 58 58.5 63 Q52 61 49.5 54 Q47.5 47 52 40 Z" className="p-sh" />
+      {/* head feathers */}
+      <path d="M54 12.5 Q53 8 56 4.5 Q57.5 8 60 9.5 Z M61 11 Q61.5 6.5 65.5 4.5 Q65.5 8.5 67.5 11 Z" />
+    </>
+  ),
+  // spyglass bishop
+  2: (
+    <>
+      {Base}
+      <path d="M43 74 Q45 68 44.5 62 L55.5 62 Q55 68 57 74 Z" />
+      <path d="M45 62 L45 42 L55 42 L55 62 Z" />
+      <path d="M46.5 42 L46.5 28 L53.5 28 L53.5 42 Z" />
+      <path d="M47.8 28 L47.8 16 L52.2 16 L52.2 28 Z" />
+      <path d="M45 47 h10 v3 h-10 z" className="p-band" />
+      <path d="M46 33 h8 v2.6 h-8 z" className="p-band" />
+      <circle cx="50" cy="13" r="3.4" />
+      <circle cx="49" cy="12" r="1.3" className="p-hi" />
+      <path d="M46.8 43 L46.8 60 L48.8 60 L48.8 43 Z" className="p-hi" />
+    </>
+  ),
+  // cutlass queen
+  4: (
+    <>
+      {Base}
+      <path d="M40 77 C38.5 71 41 66.5 42.5 61 L57.5 61 C59 66.5 61.5 71 60 77 Z" />
+      <path d="M50 26 C57 26 62.5 28.5 64.5 33 L60 56 C59 60 55.5 62 50 62 C44.5 62 41 60 40 56 L35.5 33 C37.5 28.5 43 26 50 26 Z" />
+      {/* crossed cutlasses */}
+      <path d="M38 8 Q46 14 56 22 L58.5 19.5 Q49 12.5 41 6 Q38.5 5.5 38 8 Z" />
+      <path d="M62 8 Q54 14 44 22 L41.5 19.5 Q51 12.5 59 6 Q61.5 5.5 62 8 Z" />
+      <path d="M37 25 Q44 21.5 50 21.5 Q56 21.5 63 25 Q56.5 28.5 50 28.5 Q43.5 28.5 37 25 Z" />
+      <circle cx="50" cy="24.6" r="2.6" className="p-eye" />
+      <path d="M41 32 L44.5 56 Q45.2 59.5 47.5 61 Q44 60 43 56 L39 33 Z" className="p-hi" />
+    </>
+  ),
+  // captain king
+  5: (
+    <>
+      {Base}
+      <path d="M40 77 C38.5 71 41 66.5 42.5 61 L57.5 61 C59 66.5 61.5 71 60 77 Z" />
+      <path d="M50 30 C58 30 64 33 65.5 38 L60 56 C59 60 55.5 62 50 62 C44.5 62 41 60 40 56 L34.5 38 C36 33 42 30 50 30 Z" />
+      {/* bicorne hat */}
+      <path d="M32 24 Q38 14 50 14 Q62 14 68 24 Q63 27.5 50 27.5 Q37 27.5 32 24 Z" />
+      <path d="M36 21.5 Q42 24.6 50 24.6 Q58 24.6 64 21.5" fill="none" strokeWidth="2" opacity="0.5" />
+      {/* skull & bones emblem */}
+      <circle cx="50" cy="42" r="4.6" className="p-eye" />
+      <path d="M43 48 L57 52 M57 48 L43 52" stroke="none" fill="none" />
+      <path d="M44 47.4 L56 51.4 M56 47.4 L44 51.4" fill="none" strokeWidth="2.4" />
+      <path d="M36 22 Q41 16.5 48 15 Q42.5 18.5 40 23.6 Z" className="p-hi" />
+    </>
+  ),
+};
+
+/* ============================= 15 · PHARAOH ============================= */
+
+const pharaoh: GlyphSet = {
+  // scarab pawn
+  0: (
+    <>
+      {Base}
+      <path d="M41 74 Q39 67 43 63 L57 63 Q61 67 59 74 Z" />
+      <ellipse cx="50" cy="48" rx="14" ry="15" />
+      <circle cx="50" cy="31" r="6" />
+      <path d="M50 38 L50 62 M40 44 Q45 48 50 48 Q55 48 60 44" fill="none" strokeWidth="2.2" opacity="0.65" />
+      <path d="M40 28 Q35 24 34.5 19 M60 28 Q65 24 65.5 19" fill="none" strokeWidth="2.4" />
+      <path d="M42.5 42 Q41 50 43.5 58 Q40.5 52 41 44 Z" className="p-hi" />
+    </>
+  ),
+  // pylon gate rook
+  3: (
+    <>
+      {Base}
+      <path d="M36 74 L40 30 L60 30 L64 74 Z" />
+      <path d="M34 30 L36 22 L64 22 L66 30 Z" />
+      <path d="M46 52 Q46 45 50 44 Q54 45 54 52 L54 66 L46 66 Z" className="p-eye" />
+      <path d="M44 36 h12 v2.4 h-12 z" className="p-band" />
+      <circle cx="50" cy="26" r="2" className="p-eye" />
+      <path d="M42.5 31 L39 72 L42.4 72 L45.4 31 Z" className="p-hi" />
+      <path d="M57.5 31 L61 72 L57.6 72 L54.6 31 Z" className="p-sh" />
+    </>
+  ),
+  // Anubis knight
+  1: (
+    <>
+      {Base}
+      <g transform="translate(-4 0)">
+        <path d="M74 77 L74.4 66 Q75.4 50 70 36 Q67 29 61 26.8 L62.8 12 Q62.9 9.6 60.4 10.6 L53.6 19.8 L50.4 19.8 L43.2 10.8 Q40.8 9.8 41 12.4 L43 26.6 L30 28 Q25.8 30 27 34.6 Q33.6 45.6 46.6 50.4 Q43 62.6 48.4 77 Z" />
+        {/* long tall ears interiors */}
+        <path d="M58.2 14.6 L57 24 L60.4 23 Z M45.6 15 L48 24 L44.6 23.4 Z" className="p-sh" />
+        {/* eye + collar */}
+        <path d="M40 31 a3 2 -12 1 0 0.1 0" className="p-eye" />
+        <path d="M48 50.6 Q54 54 58 60 M50.8 48 Q57.6 50.6 62.4 55.4" fill="none" strokeWidth="2.4" opacity="0.6" />
+        <path d="M27.4 36 Q31.6 39 36.4 40" fill="none" strokeWidth="2" />
+        <path d="M61 28 Q66 32.4 68.2 39.4 Q70.4 48 70 58 Q69.8 67 68.6 75.4 L72.6 75.6 Q74 62.4 72.8 50.4 Q71.6 39.4 67.2 32.4 Q65 29.2 63.2 28 Z" className="p-sh" />
+      </g>
+    </>
+  ),
+  // obelisk bishop
+  2: (
+    <>
+      {Base}
+      <path d="M43 74 Q45 68 44.5 62 L55.5 62 Q55 68 57 74 Z" />
+      <path d="M44.5 62 L47 18 L53 18 L55.5 62 Z" />
+      <path d="M47 18 L50 8 L53 18 Z" />
+      <path d="M48.6 28 L51.4 28 L51.4 40 L48.6 40 Z" className="p-eye" />
+      <circle cx="50" cy="47" r="1.8" className="p-eye" />
+      <path d="M47.4 52 h5.2 v2.2 h-5.2 z" className="p-eye" />
+      <path d="M48 19 L46.2 60 L48 60 L49.4 19 Z" className="p-hi" />
+    </>
+  ),
+  // sun-disc queen
+  4: (
+    <>
+      {Base}
+      <path d="M40 77 C38.5 71 41 66.5 42.5 61 L57.5 61 C59 66.5 61.5 71 60 77 Z" />
+      <path d="M50 26 C57 26 62.5 28.5 64.5 33 L60 56 C59 60 55.5 62 50 62 C44.5 62 41 60 40 56 L35.5 33 C37.5 28.5 43 26 50 26 Z" />
+      {/* horns + sun disc */}
+      <path d="M38 25 Q33 18 34.5 9 Q38.5 13 42 14.5 Q40 19.5 39.5 25 Z" />
+      <path d="M62 25 Q67 18 65.5 9 Q61.5 13 58 14.5 Q60 19.5 60.5 25 Z" />
+      <circle cx="50" cy="15.5" r="7.5" />
+      <path d="M38 25.5 Q44 22 50 22 Q56 22 62 25.5 Q56 28.6 50 28.6 Q44 28.6 38 25.5 Z" />
+      <circle cx="47.6" cy="13" r="2.4" className="p-hi" />
+      <path d="M41 32 L44.5 56 Q45.2 59.5 47.5 61 Q44 60 43 56 L39 33 Z" className="p-hi" />
+    </>
+  ),
+  // pharaoh king
+  5: (
+    <>
+      {Base}
+      <path d="M40 77 C38.5 71 41 66.5 42.5 61 L57.5 61 C59 66.5 61.5 71 60 77 Z" />
+      <path d="M50 30 C58 30 64 33 65.5 38 L60 56 C59 60 55.5 62 50 62 C44.5 62 41 60 40 56 L34.5 38 C36 33 42 30 50 30 Z" />
+      {/* pschent double crown */}
+      <path d="M38 28 L38 18 Q38 15 41 15 L59 15 Q62 15 62 18 L62 28 Q56 31 50 31 Q44 31 38 28 Z" />
+      <path d="M45 15 Q45 6.5 50 5 Q55 6.5 55 15 Z" />
+      {/* uraeus cobra */}
+      <path d="M49 15 Q48 11.5 50.5 10 Q53 11 52 14" fill="none" strokeWidth="2" />
+      {/* ankh */}
+      <circle cx="50" cy="40" r="3" fill="none" strokeWidth="2.4" />
+      <path d="M50 43 L50 52 M45.6 46.5 L54.4 46.5" fill="none" strokeWidth="2.4" />
+      <path d="M40 19 L40 26.6 Q43 28.4 46 29.2 Q42.4 26.6 42.6 19 Z" className="p-hi" />
+    </>
+  ),
+};
+
+/* ========================== 16 · EMERALD DRAGON ========================== */
+
+const dragon: GlyphSet = {
+  // dragon egg
+  0: (
+    <>
+      {Base}
+      <path d="M41 74 Q39 67 43 63 L57 63 Q61 67 59 74 Z" />
+      <path d="M50 24 Q62 34 62 48 Q62 60 50 63 Q38 60 38 48 Q38 34 50 24 Z" />
+      <path d="M50 30 L54 36 L50 42 L46 36 Z M44 44 L48 50 L44 56 L40.5 50 Z M56 44 L60 50 L56 56 L52 50 Z" className="p-sh" />
+      <path d="M44 34 Q40.5 42 41.5 52 Q39 44 42 33.6 Z" className="p-hi" />
+    </>
+  ),
+  // dragon keep
+  3: (
+    <>
+      {Base}
+      <path d="M38 74 L40 36 L36 34 L37 20 L42 22 L43 16 L47 20 L50 13 L53 20 L57 16 L58 22 L63 20 L64 34 L60 36 L62 74 Z" />
+      {/* wing buttresses */}
+      <path d="M38 44 Q28 42 24 34 Q31 36 36 36 Q34 40 38 41 Z" />
+      <path d="M62 44 Q72 42 76 34 Q69 36 64 36 Q66 40 62 41 Z" />
+      <path d="M46 50 Q46 44 50 43 Q54 44 54 50 L54 58 L46 58 Z" className="p-eye" />
+      <path d="M42 36 L40.4 72 L43.8 72 L45 37 Z" className="p-hi" />
+    </>
+  ),
+  // dragon head knight
+  1: (
+    <>
+      {Base}
+      <g transform="translate(-5 0)">
+        <path d="M75 77 L75.4 66 Q76.4 50 70.8 36 Q67.6 29 61.4 26.8 L64.4 18.6 Q65.4 15.6 62.4 16.6 L56.4 20.6 L57.4 12 Q57.4 9 54.8 11 L48.8 18.4 L44.4 26.4 L27.4 28.6 Q22.4 30.6 24 35.6 Q26.4 41 32.4 44.6 L28.4 44.4 Q31.4 49.6 38.8 51 Q43.4 51.8 48.4 51.6 Q44.4 63.6 49.8 77 Z" />
+        {/* jaw + teeth */}
+        <path d="M24.4 33.6 L29 35 L27 37.8 L32.4 38.4 L30.6 41.4 L35.8 41.6" fill="none" strokeWidth="2.2" />
+        {/* eye slit */}
+        <path d="M42 30 L47.4 31.6 L42.6 33.8 Z" className="p-eye" />
+        {/* horns interior */}
+        <path d="M61 19.4 L58.8 24.6 L62 23.8 Z M55 14.6 L52.6 20.8 L56 19.4 Z" className="p-sh" />
+        {/* neck spines */}
+        <path d="M61.4 26.8 L67 32 L63 33.6 L68.6 40 L64.8 41.2 L69.8 48.6 L66.4 49.6 L70.4 58 L67.4 58.6 L70 67 L67.8 67.4 L68.6 75.4 L72.8 75.6 Q74.4 62.4 73 50.4 Q71.6 39.4 67.4 32.6 Q64.8 29.4 63 28.2 Z" className="p-sh" />
+        {/* scale hints */}
+        <path d="M50 56 Q55 58 58 62 M48.6 62 Q53.6 64 56.6 68 M48.4 68 Q53 70 55.6 73.6" fill="none" strokeWidth="2" opacity="0.5" />
+      </g>
+    </>
+  ),
+  // talon bishop
+  2: (
+    <>
+      {Base}
+      <path d="M43 74 Q45 68 44.5 62 L55.5 62 Q55 68 57 74 Z" />
+      <path d="M45 62 Q42 48 45.5 36 Q48 27 50 22 Q52 27 54.5 36 Q58 48 55 62 Z" />
+      {/* curved talon tip */}
+      <path d="M50 22 Q48 14 41 10.5 Q46 10 50.5 13 Q54 15.5 54.5 21 Q52.4 19.6 50 22 Z" />
+      <path d="M48.6 34 L51.4 34 L51.4 46 L48.6 46 Z" className="p-eye" />
+      <path d="M46 40 Q45 50 46.4 60 L48.4 60 Q47.4 50 48.4 38 Z" className="p-hi" />
+    </>
+  ),
+  // wing-crown queen
+  4: (
+    <>
+      {Base}
+      <path d="M40 77 C38.5 71 41 66.5 42.5 61 L57.5 61 C59 66.5 61.5 71 60 77 Z" />
+      <path d="M50 26 C57 26 62.5 28.5 64.5 33 L60 56 C59 60 55.5 62 50 62 C44.5 62 41 60 40 56 L35.5 33 C37.5 28.5 43 26 50 26 Z" />
+      {/* bat-wing crown */}
+      <path d="M46 24 Q38 22 35 15 Q34 9 39 7 Q39.5 11.5 43 13 Q42 16.5 45.5 18 Q45.5 21.5 48 23.4 Z" />
+      <path d="M54 24 Q62 22 65 15 Q66 9 61 7 Q60.5 11.5 57 13 Q58 16.5 54.5 18 Q54.5 21.5 52 23.4 Z" />
+      <circle cx="50" cy="20" r="3.6" />
+      <circle cx="48.8" cy="18.8" r="1.4" className="p-hi" />
+      <path d="M41 32 L44.5 56 Q45.2 59.5 47.5 61 Q44 60 43 56 L39 33 Z" className="p-hi" />
+    </>
+  ),
+  // dragonfang king
+  5: (
+    <>
+      {Base}
+      <path d="M40 77 C38.5 71 41 66.5 42.5 61 L57.5 61 C59 66.5 61.5 71 60 77 Z" />
+      <path d="M50 30 C58 30 64 33 65.5 38 L60 56 C59 60 55.5 62 50 62 C44.5 62 41 60 40 56 L34.5 38 C36 33 42 30 50 30 Z" />
+      <path d="M36.5 38.5 C39 34.5 44 32.2 50 32.2 C56 32.2 61 34.5 63.5 38.5 L62 31.5 C59 28 55 26.3 50 26.3 C45 26.3 41 28 38 31.5 Z" className="p-band" />
+      {/* fang crown */}
+      <path d="M39 27 Q37 19 40.5 12 Q42.5 17 44.5 19 Q44 23 43 27 Z" />
+      <path d="M61 27 Q63 19 59.5 12 Q57.5 17 55.5 19 Q56 23 57 27 Z" />
+      <path d="M46.5 24 Q45.5 15 50 8 Q54.5 15 53.5 24 Q52 26 50 26 Q48 26 46.5 24 Z" />
+      <circle cx="50" cy="42" r="2.6" className="p-eye" />
+      <path d="M48 11.5 Q46.6 17 47.4 23 L49 24 Q48.4 17.5 49.6 11 Z" className="p-hi" />
+    </>
+  ),
+};
+
 export const THEME_GLYPHS: Record<number, GlyphSet> = {
   1: safari,
   2: cowboy,
@@ -1025,4 +1386,13 @@ export const THEME_GLYPHS: Record<number, GlyphSet> = {
   10: galaxy,
   11: candy,
   12: samurai,
+  13: steampunk,
+  14: pirate,
+  15: pharaoh,
+  16: dragon,
+  // variants — same hand-built sculpts, new materials
+  17: royal,
+  18: samurai,
+  19: ocean,
+  20: halloween,
 };
