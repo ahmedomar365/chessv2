@@ -47,7 +47,8 @@ test('challenges, spectating, and chat', async ({ browser }, testInfo) => {
 
   // --- C spectates
   await expect(pageC.getByText('Live games')).toBeVisible({ timeout: 10_000 });
-  await pageC.getByRole('button', { name: 'Watch' }).first().click();
+  // watch THIS game specifically (other real live games may be in the list)
+  await pageC.locator('.player-row', { hasText: runId }).getByRole('button', { name: 'Watch' }).first().click();
   await expect(pageC.locator('.board')).toBeVisible({ timeout: 10_000 });
   await expect(pageC.getByRole('button', { name: 'Stop watching' })).toBeVisible();
 
