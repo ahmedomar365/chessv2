@@ -181,7 +181,16 @@ pub fn send_chat(ctx: &ReducerContext, channel: u8, game_id: u64, text: String) 
     }
 
     match channel {
-        0 => {}
+        0 => {
+            // anti-spam gate: only players who've finished a game may use the
+            // global lobby chat. (In-game and spectator chat stay open.)
+            let played = ctx.db.player_profile().account_id().find(s.account_id)
+                .map(|p| p.games > 0)
+                .unwrap_or(false);
+            if !played {
+                return Err("NEED_GAME".into());
+            }
+        }
         1 => {
             let g = ctx.db.game().game_id().find(game_id).ok_or("No such game")?;
             if g.white_id != s.account_id && g.black_id != s.account_id {

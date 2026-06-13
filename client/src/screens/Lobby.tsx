@@ -49,7 +49,8 @@ export default function Lobby({
   };
   const oops = (e: unknown) => say(String(e instanceof Error ? e.message : e).replace(/^.*Error: /, ''));
 
-  const searching = queue.some((q) => q.accountId === me.accountId);
+  const queuedIds = useMemo(() => new Set(queue.map((q) => q.accountId.toString())), [queue]);
+  const searching = queuedIds.has(me.accountId.toString());
 
   const players = useMemo(() => {
     const seen = new Map<bigint, Session>();
@@ -215,10 +216,16 @@ export default function Lobby({
                       {p.accountId === me.accountId && <span className="you-chip">you</span>}
                     </button>
                     <span className="player-side">
-                      <span className={`status-chip s${p.status}`}>
-                        {p.status === 1 ? 'in game' : p.status === 2 ? 'watching' : 'lobby'}
-                      </span>
-                      {p.accountId !== me.accountId && p.status === 0 && (
+                      {p.status === 0 && queuedIds.has(p.accountId.toString()) ? (
+                        <span className="status-chip searching">
+                          <span className="pulse-dot sm" /> searching
+                        </span>
+                      ) : (
+                        <span className={`status-chip s${p.status}`}>
+                          {p.status === 1 ? 'in game' : p.status === 2 ? 'watching' : 'lobby'}
+                        </span>
+                      )}
+                      {p.accountId !== me.accountId && p.status === 0 && !queuedIds.has(p.accountId.toString()) && (
                         <button
                           className="btn btn-ghost btn-sm"
                           onClick={() => createChallenge({ toAccountId: p.accountId }).catch(oops)}

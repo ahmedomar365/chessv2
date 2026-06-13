@@ -45,7 +45,7 @@ test('full two-player game flow', async ({ browser }, testInfo) => {
 
   // A queues first → A is white
   await pageA.getByRole('button', { name: 'PLAY', exact: true }).click();
-  await expect(pageA.getByText('Searching')).toBeVisible({ timeout: 10_000 });
+  await expect(pageA.locator('.btn-searching')).toBeVisible({ timeout: 10_000 });
   await pageB.getByRole('button', { name: 'PLAY', exact: true }).click();
 
   // both land on boards

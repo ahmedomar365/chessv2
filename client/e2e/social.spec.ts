@@ -29,14 +29,7 @@ test('challenges, spectating, and chat', async ({ browser }, testInfo) => {
   await register(pageB, `sob_${runId}`);
   await register(pageC, `soc_${runId}`);
 
-  // --- global chat (lives in its own lobby tab now)
-  await pageA.getByRole('button', { name: 'Chat' }).click();
-  await pageA.locator('.chat-input-row input').fill(`gl_${runId}`);
-  await pageA.locator('.chat-input-row button').click();
-  await pageB.getByRole('button', { name: 'Chat' }).click();
-  await expect(pageB.locator('.chat-list')).toContainText(`gl_${runId}`, { timeout: 8_000 });
-  await pageA.getByRole('button', { name: 'Arena' }).click();
-  await pageB.getByRole('button', { name: 'Arena' }).click();
+  // global chat is gated to players who've finished a game — covered at the end
 
   // --- open challenge: A posts, B accepts
   await pageA.getByRole('button', { name: 'Post open challenge' }).click();
@@ -76,4 +69,13 @@ test('challenges, spectating, and chat', async ({ browser }, testInfo) => {
   await pageA.getByRole('button', { name: 'Confirm', exact: true }).click();
   await expect(pageC.locator('.result-title')).toContainText('WINS', { timeout: 10_000 });
   await expect(pageB.locator('.result-title')).toHaveText('VICTORY', { timeout: 10_000 });
+
+  // --- global chat: now that A & B have a finished game, the gate lets them in
+  await pageA.getByRole('button', { name: 'Back to lobby' }).click();
+  await pageB.getByRole('button', { name: 'Back to lobby' }).click();
+  await pageA.getByRole('button', { name: 'Chat' }).click();
+  await pageA.locator('.chat-input-row input').fill(`gl_${runId}`);
+  await pageA.locator('.chat-input-row button').click();
+  await pageB.getByRole('button', { name: 'Chat' }).click();
+  await expect(pageB.locator('.chat-list')).toContainText(`gl_${runId}`, { timeout: 8_000 });
 });

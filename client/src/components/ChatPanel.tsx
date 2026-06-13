@@ -38,8 +38,15 @@ export default function ChatPanel({
     if (!text) return;
     setDraft('');
     sendChat({ channel, gameId, text }).catch((e) => {
-      setError(String(e instanceof Error ? e.message : e).includes('fast') ? 'Slow down…' : 'Message not sent');
-      setTimeout(() => setError(null), 1800);
+      const msg = String(e instanceof Error ? e.message : e);
+      setError(
+        msg.includes('NEED_GAME')
+          ? 'Play a game first to chat in the lobby'
+          : msg.includes('fast')
+            ? 'Slow down…'
+            : 'Message not sent',
+      );
+      setTimeout(() => setError(null), 2400);
     });
   };
 
