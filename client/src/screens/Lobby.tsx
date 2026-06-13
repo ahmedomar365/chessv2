@@ -4,7 +4,6 @@ import { reducers, tables } from '../module_bindings';
 import type { Game, Session } from '../module_bindings/types';
 import ChatPanel from '../components/ChatPanel';
 import Tutorial from '../components/Tutorial';
-import { WalletChips } from './ShopScreen';
 
 type Tab = 'arena' | 'ranks' | 'chat';
 
@@ -35,7 +34,6 @@ export default function Lobby({
   const [challenges] = useTable(tables.challenge);
   const [spectators] = useTable(tables.spectator);
   const [profiles] = useTable(tables.player_profile);
-  const [wallets] = useTable(tables.my_wallet);
 
   const [tab, setTab] = useState<Tab>('arena');
   const [showTutorial, setShowTutorial] = useState(() => !localStorage.getItem('chessv2_tutorial_seen'));
@@ -82,7 +80,7 @@ export default function Lobby({
           CHESS<em>V2</em>
         </div>
         <div className="lobby-id">
-          {wallets[0] && <WalletChips coins={wallets[0].coins} crowns={wallets[0].crowns} />}
+          {/* wallet chips hidden while the shop is disabled */}
           <button className="lobby-user as-link" onClick={() => onOpenProfile(me.accountId)}>
             {me.username}
             <span className="lobby-rating">{myRating}</span>
