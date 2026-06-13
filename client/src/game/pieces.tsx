@@ -39,6 +39,7 @@ const GLYPHS: Record<PieceTy, ReactElement> = {
   1: (
     <>
       {Base}
+      <g transform="translate(-6 0)">
       <path d="M76.4 77 L76.6 67 Q77.4 51.6 71.6 36.2 Q68.2 29.4 62 27.2 L58.7 17.2 C58.2 15.6 56.4 15.6 55.8 17.2 L53.3 24.9 L51.9 24.8 L48.8 14.7 C48.3 13.1 46.4 13.1 45.9 14.8 L43.6 26.4 L26.5 28.2 Q21.7 30.4 23.2 35.4 Q30.3 47.6 47.6 51.6 Q43.8 63.7 49.5 77 Z" />
       {/* mouth, nostril, eye, cheek */}
       <path d="M23.6 38 Q28 40.6 32.6 41.4" fill="none" strokeWidth="2" />
@@ -50,6 +51,7 @@ const GLYPHS: Record<PieceTy, ReactElement> = {
       <path d="M62.5 28.5 Q67.4 32.8 69.6 39.6 Q71.8 48 71.4 58 Q71.2 67 70 75.5" fill="none" strokeWidth="2" opacity="0.5" />
       {/* chest highlight */}
       <path d="M46.2 53 Q44.4 62 47.6 73 L50.8 73 Q47.8 62.5 49.4 53.6 Z" className="p-hi" />
+      </g>
     </>
   ),
 
