@@ -3,6 +3,7 @@ import { useReducer, useTable } from 'spacetimedb/react';
 import { reducers, tables } from '../module_bindings';
 import type { Game, Session } from '../module_bindings/types';
 import ChatPanel from '../components/ChatPanel';
+import Tutorial from '../components/Tutorial';
 
 export default function Lobby({
   me,
@@ -27,7 +28,13 @@ export default function Lobby({
   const declineChallenge = useReducer(reducers.declineChallenge);
   const spectate = useReducer(reducers.spectate);
 
+  const playBot = useReducer(reducers.playBot);
   const [queue] = useTable(tables.queue_entry);
+  const [showTutorial, setShowTutorial] = useState(() => !localStorage.getItem('chessv2_tutorial_seen'));
+  const closeTutorial = () => {
+    localStorage.setItem('chessv2_tutorial_seen', '1');
+    setShowTutorial(false);
+  };
   const [challenges] = useTable(tables.challenge);
   const [spectators] = useTable(tables.spectator);
   const [profiles] = useTable(tables.player_profile);
@@ -101,11 +108,17 @@ export default function Lobby({
           </button>
         )}
         <div className="play-sub nav-row">
+          <button className="btn btn-ghost btn-sm" onClick={() => playBot().catch(oops)}>
+            🤖 vs Bot
+          </button>
           <button className="btn btn-ghost btn-sm" onClick={onOpenShop}>
             🛒 Shop
           </button>
           <button className="btn btn-ghost btn-sm" onClick={onOpenCollection}>
             🃏 Loadouts
+          </button>
+          <button className="btn btn-ghost btn-sm" onClick={() => setShowTutorial(true)}>
+            📖 How to play
           </button>
           {mine ? (
             <button className="btn btn-ghost btn-sm" onClick={() => declineChallenge({ challengeId: mine.challengeId }).catch(oops)}>
@@ -213,6 +226,7 @@ export default function Lobby({
         <ChatPanel channel={0} gameId={0n} myAccountId={me.accountId} />
       </section>
 
+      {showTutorial && <Tutorial onClose={closeTutorial} />}
       {toast && <div className="toast toast-fixed">{toast}</div>}
     </div>
   );

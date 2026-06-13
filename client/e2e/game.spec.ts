@@ -20,7 +20,9 @@ async function register(page: Page, name: string) {
   await page.getByRole('textbox', { name: 'Username' }).fill(name);
   await page.getByRole('textbox', { name: 'Password' }).fill('e2e_password');
   await page.getByRole('button', { name: 'Create account' }).click();
-  await expect(page.getByRole('button', { name: 'PLAY' })).toBeVisible({ timeout: 20_000 });
+  // dismiss the first-run tutorial overlay
+  await page.getByRole('button', { name: 'Skip' }).click({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: 'PLAY', exact: true })).toBeVisible({ timeout: 20_000 });
 }
 
 /** Click square (file 0-7, rank 0-7) given the player's orientation. */
@@ -42,9 +44,9 @@ test('full two-player game flow', async ({ browser }, testInfo) => {
   await register(pageB, `e2b_${runId}`);
 
   // A queues first → A is white
-  await pageA.getByRole('button', { name: 'PLAY' }).click();
+  await pageA.getByRole('button', { name: 'PLAY', exact: true }).click();
   await expect(pageA.getByText('Searching for an opponent')).toBeVisible({ timeout: 10_000 });
-  await pageB.getByRole('button', { name: 'PLAY' }).click();
+  await pageB.getByRole('button', { name: 'PLAY', exact: true }).click();
 
   // both land on boards
   await expect(pageA.locator('.board')).toBeVisible({ timeout: 15_000 });
@@ -128,7 +130,7 @@ test('full two-player game flow', async ({ browser }, testInfo) => {
 
   // back to lobby
   await pageB.getByRole('button', { name: 'Back to lobby' }).click();
-  await expect(pageB.getByRole('button', { name: 'PLAY' })).toBeVisible({ timeout: 10_000 });
+  await expect(pageB.getByRole('button', { name: 'PLAY', exact: true })).toBeVisible({ timeout: 10_000 });
 
   // --- ranked: winner's profile shows the ELO gain (1200 + 16 provisional K)
   await pageB.locator('.lobby-user').click();

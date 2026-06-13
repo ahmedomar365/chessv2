@@ -14,7 +14,9 @@ async function register(page: Page, name: string) {
   await page.getByRole('textbox', { name: 'Username' }).fill(name);
   await page.getByRole('textbox', { name: 'Password' }).fill('e2e_password');
   await page.getByRole('button', { name: 'Create account' }).click();
-  await expect(page.getByRole('button', { name: 'PLAY' })).toBeVisible({ timeout: 20_000 });
+  // dismiss the first-run tutorial overlay
+  await page.getByRole('button', { name: 'Skip' }).click({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: 'PLAY', exact: true })).toBeVisible({ timeout: 20_000 });
 }
 
 test('challenges, spectating, and chat', async ({ browser }, testInfo) => {

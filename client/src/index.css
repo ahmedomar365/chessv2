@@ -908,6 +908,15 @@ body::before {
 .mini-preview { width: 100%; display: block; }
 .theme-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 11px; font-size: 13.5px; }
 
+/* tutorial */
+.tutorial-card { max-width: 420px; padding: 30px 30px 24px; }
+.tutorial-art { font-size: 40px; }
+.tutorial-title { font-size: 22px; }
+.tutorial-body { color: var(--dim); font-size: 14.5px; line-height: 1.6; margin: 4px 0 10px; text-align: center; }
+.tutorial-dots { display: flex; justify-content: center; gap: 6px; margin-bottom: 16px; }
+.tut-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--line); }
+.tut-dot-on { background: var(--gold); }
+
 /* result modal */
 
 .modal-veil {
