@@ -1,6 +1,6 @@
 //! Social features: chat (global / in-game / spectator), challenges, spectating.
 
-use spacetimedb::{reducer, table, ReducerContext, Table, TimeDuration, Timestamp};
+use spacetimedb::{reducer, table, ReducerContext, Table, Timestamp};
 
 use crate::game::{live_game_of, logged_in, start_game_pair};
 use crate::module::*;
@@ -62,6 +62,63 @@ pub struct Spectator {
 
 /// Soft profanity filter — masks listed words, never blocks the message.
 /// ASCII-only: lowercase of multibyte text can shift byte offsets.
+/// Common TLDs / shortener endings used to detect bare domains.
+const LINK_TLDS: [&str; 42] = [
+    "com", "net", "org", "io", "gg", "ly", "me", "co", "xyz", "link", "app", "dev", "gl", "info",
+    "biz", "ru", "cn", "tk", "club", "online", "site", "shop", "store", "live", "tv", "to", "cc",
+    "ws", "ml", "ga", "cf", "icu", "top", "fun", "click", "buzz", "page", "win", "vip", "pro",
+    "download", "stream",
+];
+
+/// Our own domain is allowed (e.g. someone sharing chessv2.com).
+fn is_allowed_link(lower_tok: &str) -> bool {
+    lower_tok.contains("chessv2.com") && !lower_tok.contains("chessv2.com.")
+}
+
+/// Does this token look like a URL or bare domain?
+fn looks_like_link(tok: &str) -> bool {
+    let l = tok.to_lowercase();
+    if l.contains("://") || l.starts_with("www.") {
+        return true;
+    }
+    let mut i = 0;
+    while let Some(rel) = l[i..].find('.') {
+        let dot = i + rel;
+        let before_alnum = dot > 0
+            && l[..dot].chars().last().map(|c| c.is_ascii_alphanumeric()).unwrap_or(false);
+        let after = &l[dot + 1..];
+        let run: String = after.chars().take_while(|c| c.is_ascii_alphabetic()).collect();
+        if before_alnum && run.len() >= 2 {
+            let next = after.as_bytes().get(run.len()).copied();
+            if next == Some(b'/') || LINK_TLDS.contains(&run.as_str()) {
+                return true;
+            }
+        }
+        i = dot + 1;
+    }
+    false
+}
+
+/// Mask links/domains in chat to curb spam, after undoing common evasions
+/// ("rebrand dot ly", "rebrand[.]ly", "hxxp://"). Keeps chessv2.com itself.
+fn strip_links(text: &str) -> String {
+    let mut norm = text.to_string();
+    for pat in [" dot ", " DOT ", "(dot)", "(DOT)", "[dot]", "[.]", "(.)", "{.}"] {
+        norm = norm.replace(pat, ".");
+    }
+    norm = norm.replace("hxxp", "http").replace("hXXp", "http");
+
+    let mut out: Vec<String> = Vec::new();
+    for tok in norm.split_whitespace() {
+        if looks_like_link(tok) && !is_allowed_link(&tok.to_lowercase()) {
+            out.push("⟨link removed⟩".to_string());
+        } else {
+            out.push(tok.to_string());
+        }
+    }
+    out.join(" ")
+}
+
 fn clean_text(text: &str) -> String {
     if !text.is_ascii() {
         return text.to_string();
@@ -78,6 +135,24 @@ fn clean_text(text: &str) -> String {
         }
     }
     out
+}
+
+/// ADMIN ONLY: delete existing chat messages that contain links (cleans up
+/// spam posted before the link filter existed).
+#[reducer]
+pub fn admin_purge_link_chat(ctx: &ReducerContext) -> Result<(), String> {
+    let admin = spacetimedb::Identity::from_hex(crate::economy::ADMIN_HEX).map_err(|_| "bad admin")?;
+    if ctx.sender() != admin {
+        return Err("Forbidden".into());
+    }
+    let ids: Vec<u64> = ctx.db.chat_message().iter()
+        .filter(|m| m.text.contains("://") || looks_like_link(&m.text))
+        .map(|m| m.msg_id)
+        .collect();
+    for id in ids {
+        ctx.db.chat_message().msg_id().delete(id);
+    }
+    Ok(())
 }
 
 #[reducer]
@@ -128,7 +203,7 @@ pub fn send_chat(ctx: &ReducerContext, channel: u8, game_id: u64, text: String) 
         game_id: if channel == 0 { 0 } else { game_id },
         account_id: s.account_id,
         username: s.username.clone(),
-        text: clean_text(trimmed),
+        text: clean_text(&strip_links(trimmed)),
         ts: ctx.timestamp,
     });
 
