@@ -19,7 +19,7 @@ async function register(page: Page, name: string) {
   await page.goto('/');
   await page.getByRole('textbox', { name: 'Username' }).fill(name);
   await page.getByRole('textbox', { name: 'Password' }).fill('e2e_password');
-  await page.getByRole('button', { name: 'Create account' }).click();
+  await page.getByRole('button', { name: 'ENTER' }).click();
   // dismiss the first-run tutorial overlay
   await page.getByRole('button', { name: 'Skip' }).click({ timeout: 20_000 });
   await expect(page.getByRole('button', { name: 'PLAY', exact: true })).toBeVisible({ timeout: 20_000 });
@@ -45,7 +45,7 @@ test('full two-player game flow', async ({ browser }, testInfo) => {
 
   // A queues first → A is white
   await pageA.getByRole('button', { name: 'PLAY', exact: true }).click();
-  await expect(pageA.getByText('Searching for an opponent')).toBeVisible({ timeout: 10_000 });
+  await expect(pageA.getByText('Searching')).toBeVisible({ timeout: 10_000 });
   await pageB.getByRole('button', { name: 'PLAY', exact: true }).click();
 
   // both land on boards
@@ -64,10 +64,14 @@ test('full two-player game flow', async ({ browser }, testInfo) => {
     timeout: 5_000,
   });
 
-  // cooldown feedback: white immediately tries the same pawn again → shake
+  // cooldown: moving the same pawn again queues a PREMOVE (lichess-style)
+  // which auto-fires the moment the 3s pawn cooldown ends → pawn lands on e5
   await clickSquare(pageA, 4, 3, false);
   await clickSquare(pageA, 4, 4, false);
-  await expect(pageA.locator('.piece-shake')).toBeVisible({ timeout: 2_000 });
+  await expect(pageA.locator('.sq-premove').first()).toBeVisible({ timeout: 2_000 });
+  await expect(pageA.locator('g.piece-slot[style*="translate(400px, 300px)"]')).toBeVisible({
+    timeout: 7_000,
+  });
 
   // ---- cards: hand of 3 renders; play a no-target or targeted card once affordable
   await expect(pageA.locator('.card-tile')).toHaveCount(3);

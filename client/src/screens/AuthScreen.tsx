@@ -3,25 +3,23 @@ import { useReducer } from 'spacetimedb/react';
 import { reducers } from '../module_bindings';
 
 export default function AuthScreen() {
-  const login = useReducer(reducers.login);
-  const register = useReducer(reducers.register);
+  const enter = useReducer(reducers.enter);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState<'login' | 'register' | null>(null);
+  const [busy, setBusy] = useState(false);
 
-  const submit = async (kind: 'login' | 'register') => {
+  const submit = async () => {
     if (busy) return;
     setError(null);
-    setBusy(kind);
+    setBusy(true);
     try {
-      if (kind === 'login') await login({ username: username.trim(), password });
-      else await register({ username: username.trim(), password });
+      await enter({ username: username.trim(), password });
       // success → session row updates and App re-routes
     } catch (e) {
       setError(humanize(e));
     } finally {
-      setBusy(null);
+      setBusy(false);
     }
   };
 
@@ -36,7 +34,7 @@ export default function AuthScreen() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            submit('login');
+            submit();
           }}
         >
           <label className="field">
@@ -64,26 +62,16 @@ export default function AuthScreen() {
 
           {error && <div className="form-error">{error}</div>}
 
-          <div className="auth-actions">
-            <button type="submit" className="btn btn-gold" disabled={busy !== null || !username || !password}>
-              {busy === 'login' ? 'Entering…' : 'Log in'}
-            </button>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              disabled={busy !== null || !username || !password}
-              onClick={() => submit('register')}
-            >
-              {busy === 'register' ? 'Forging…' : 'Create account'}
-            </button>
-          </div>
+          <button type="submit" className="btn btn-gold btn-enter" disabled={busy || !username || password.length < 6}>
+            {busy ? 'Entering the arena…' : 'ENTER'}
+          </button>
         </form>
 
+        <p className="auth-note">New name? Your account is created on the spot.</p>
         <div className="warn-box">
           ⚠ There is <strong>no password recovery</strong>. Save your password somewhere safe — a lost
           password means a lost account.
         </div>
-        <p className="auth-note">Logging in never creates an account — use “Create account” the first time.</p>
       </div>
     </div>
   );
@@ -91,7 +79,7 @@ export default function AuthScreen() {
 
 function humanize(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e);
-  // Reducer errors arrive wrapped; surface the meaningful part.
-  const m = msg.match(/(?:Error: )?([^:]*(?:Username|Password|Account|Wrong|Too many)[^.]*)/);
-  return m ? m[1].trim() : msg;
+  if (msg.includes('Wrong password')) return 'That name is taken and the password does not match';
+  const m = msg.match(/(?:Error: )?([^:]*(?:Username|Password|Account|Too many)[^.]*)/);
+  return m ? m[1].trim() : 'Could not sign in — try again';
 }

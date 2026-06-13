@@ -13,7 +13,7 @@ async function register(page: Page, name: string) {
   await page.goto('/');
   await page.getByRole('textbox', { name: 'Username' }).fill(name);
   await page.getByRole('textbox', { name: 'Password' }).fill('e2e_password');
-  await page.getByRole('button', { name: 'Create account' }).click();
+  await page.getByRole('button', { name: 'ENTER' }).click();
   // dismiss the first-run tutorial overlay
   await page.getByRole('button', { name: 'Skip' }).click({ timeout: 20_000 });
   await expect(page.getByRole('button', { name: 'PLAY', exact: true })).toBeVisible({ timeout: 20_000 });
@@ -29,20 +29,24 @@ test('challenges, spectating, and chat', async ({ browser }, testInfo) => {
   await register(pageB, `sob_${runId}`);
   await register(pageC, `soc_${runId}`);
 
-  // --- global chat
+  // --- global chat (lives in its own lobby tab now)
+  await pageA.getByRole('button', { name: 'Chat' }).click();
   await pageA.locator('.chat-input-row input').fill(`gl_${runId}`);
   await pageA.locator('.chat-input-row button').click();
+  await pageB.getByRole('button', { name: 'Chat' }).click();
   await expect(pageB.locator('.chat-list')).toContainText(`gl_${runId}`, { timeout: 8_000 });
+  await pageA.getByRole('button', { name: 'Arena' }).click();
+  await pageB.getByRole('button', { name: 'Arena' }).click();
 
   // --- open challenge: A posts, B accepts
   await pageA.getByRole('button', { name: 'Post open challenge' }).click();
-  await expect(pageB.locator('.panel', { hasText: 'Open challenges' })).toBeVisible({ timeout: 8_000 });
-  await pageB.locator('.panel', { hasText: 'Open challenges' }).getByRole('button', { name: 'Accept' }).click();
+  await expect(pageB.getByText('Open challenges')).toBeVisible({ timeout: 8_000 });
+  await pageB.getByRole('button', { name: 'Accept' }).first().click();
   await expect(pageA.locator('.board')).toBeVisible({ timeout: 15_000 });
   await expect(pageB.locator('.board')).toBeVisible({ timeout: 15_000 });
 
   // --- C spectates
-  await expect(pageC.locator('.panel', { hasText: 'Live games' })).toBeVisible({ timeout: 10_000 });
+  await expect(pageC.getByText('Live games')).toBeVisible({ timeout: 10_000 });
   await pageC.getByRole('button', { name: 'Watch' }).first().click();
   await expect(pageC.locator('.board')).toBeVisible({ timeout: 10_000 });
   await expect(pageC.getByRole('button', { name: 'Stop watching' })).toBeVisible();

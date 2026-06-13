@@ -5,9 +5,13 @@ import type { EffectLog, Game, Session } from '../module_bindings/types';
 import BoardSvg, { type Flash } from '../game/BoardSvg';
 import { CardHand, GemMeter } from '../game/CardHand';
 import { CARDS, gemsNow } from '../game/cardsMeta';
-import { legalTargets, type LPiece } from '../game/legal';
+import { legalTargets, isLegal, type LPiece } from '../game/legal';
+import { piecesFromSnapshot } from '../game/snapshot';
 import { themeById } from '../game/themes';
 import ChatPanel from '../components/ChatPanel';
+
+/** Spectators watch on a delay to prevent ghosting. */
+const SPECTATE_DELAY_MS = 15_000;
 
 export default function GameScreen({
   game,
@@ -25,21 +29,25 @@ export default function GameScreen({
   const resign = useReducer(reducers.resign);
   const offerDraw = useReducer(reducers.offerDraw);
   const stopSpectating = useReducer(reducers.stopSpectating);
+
+  const [livePieces] = useTable(tables.piece.where((r) => r.gameId.eq(game.gameId)));
+  const [moves] = useTable(tables.move_log.where((r) => r.gameId.eq(game.gameId)));
+  const [gemRows] = useTable(tables.game_gems.where((r) => r.gameId.eq(game.gameId)));
+  const [statusRows] = useTable(tables.piece_status.where((r) => r.gameId.eq(game.gameId)));
+  const [cardRows] = useTable(tables.my_card_state);
   const [allSpectators] = useTable(tables.spectator);
+  const [sessions] = useTable(tables.session);
+  const [myProfiles] = useTable(tables.player_profile.where((r) => r.accountId.eq(me.accountId)));
+
+  const theme = themeById(myProfiles[0]?.equippedSkin);
   const specCount = allSpectators.filter((s) => s.gameId === game.gameId).length;
   const [chatOpen, setChatOpen] = useState(false);
 
-  const [pieces] = useTable(tables.piece.where((r) => r.gameId.eq(game.gameId)));
-  const [moves] = useTable(tables.move_log.where((r) => r.gameId.eq(game.gameId)));
-  const [gemRows] = useTable(tables.game_gems.where((r) => r.gameId.eq(game.gameId)));
-  const [cardRows] = useTable(tables.my_card_state);
-  const [myProfiles] = useTable(tables.player_profile.where((r) => r.accountId.eq(me.accountId)));
-  const theme = themeById(myProfiles[0]?.equippedSkin);
-
   const amWhite = spectating ? true : game.whiteId === me.accountId;
   const myColor = amWhite ? 0 : 1;
+  const oppId = amWhite ? game.blackId : game.whiteId;
 
-  // ---- server clock offset (refined from each move's server timestamp) ----
+  // ---- server clock offset ----
   const offsetRef = useRef(0);
   useEffect(() => {
     if (moves.length === 0) return;
@@ -48,20 +56,40 @@ export default function GameScreen({
   }, [moves.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const serverNow = useCallback(() => Date.now() + offsetRef.current, []);
 
+  // ---- delayed board for spectators (anti-ghosting) ----
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    if (!spectating) return;
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, [spectating]);
+  const pieces = useMemo(() => {
+    if (!spectating || game.phase === 2) return livePieces;
+    void tick;
+    const cutoff = serverNow() - SPECTATE_DELAY_MS;
+    const past = moves.filter((m) => Number(m.ts.toMillis()) <= cutoff);
+    if (past.length === 0) return piecesFromSnapshot('RNBQKBNRPPPPPPPP' + '.'.repeat(32) + 'pppppppprnbqkbnr', game.gameId);
+    const latest = past.reduce((a, b) => (a.seq > b.seq ? a : b));
+    return piecesFromSnapshot(latest.boardAfter, game.gameId);
+  }, [spectating, game.phase, game.gameId, livePieces, moves, tick, serverNow]);
+
   // ---- cards & gems ----
   const myCardState = useMemo(
     () => cardRows.find((c) => c.gameId === game.gameId && c.accountId === me.accountId),
     [cardRows, game.gameId, me.accountId],
   );
   const hand = useMemo(() => (myCardState ? Array.from(myCardState.hand) : []), [myCardState]);
+  const deckCount = myCardState?.deck.length ?? 0;
+  const discardCount = myCardState?.discard.length ?? 0;
   const myGems = gemRows.find((g) => g.accountId === me.accountId);
   const oppGems = gemRows.find((g) => g.accountId !== me.accountId);
 
   const [armed, setArmed] = useState<number | null>(null);
   const [swapFirst, setSwapFirst] = useState<number | null>(null);
 
-  // ---- selection & toasts & flashes ----
+  // ---- selection, premove, toasts, flashes ----
   const [selected, setSelected] = useState<number | null>(null);
+  const [premove, setPremove] = useState<{ from: number; to: number } | null>(null);
   const [shakeSq, setShakeSq] = useState<number | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [flashes, setFlashes] = useState<Flash[]>([]);
@@ -84,7 +112,15 @@ export default function GameScreen({
     setTimeout(() => setFlashes((fs) => fs.filter((f) => f.id !== id)), 750);
   }, []);
 
-  // ---- effect log → animations/toasts (only NEW effects, not history) ----
+  // ---- stasis (active piece ids) ----
+  const stasisIds = useMemo(() => {
+    const now = serverNow();
+    return new Set(
+      statusRows.filter((s) => Number(s.stasisUntil.toMillis()) > now).map((s) => s.pieceId.toString()),
+    );
+  }, [statusRows, serverNow]);
+
+  // ---- effect log → animations/toasts ----
   const seenReady = useRef(false);
   useEffect(() => {
     seenReady.current = false;
@@ -95,7 +131,7 @@ export default function GameScreen({
       const mine = e.actorColor === myColor;
       switch (e.kind) {
         case 0:
-          if (!mine) say(`Opponent played ${CARDS[e.card]?.name ?? 'a card'}`);
+          if (!mine && !spectating) say(`Opponent played ${CARDS[e.card]?.name ?? 'a card'}`);
           break;
         case 1:
           flash(e.bSq, 'gold');
@@ -120,6 +156,20 @@ export default function GameScreen({
           break;
         case 8:
           say(mine ? '⏳ Stole 2 gems' : '⏳ Your gems were stolen!');
+          break;
+        case 10:
+          flash(e.aSq, 'gold');
+          say('🕊 A piece returns!');
+          break;
+        case 11:
+          flash(e.aSq, 'teal');
+          flash(e.bSq, 'teal');
+          break;
+        case 12:
+          say(mine ? '⚙ Overclocked!' : '⚙ Enemy overclocked!');
+          break;
+        case 13:
+          flash(e.aSq, 'violet');
           break;
       }
     },
@@ -161,6 +211,20 @@ export default function GameScreen({
             (p) => p.color === myColor && Number(p.cooldownUntil.toMillis()) <= now && p.sq !== swapFirst,
           )
           .map((p) => p.sq);
+      case 'own-pawn':
+        return pieces.filter((p) => p.color === myColor && p.ty === 0).map((p) => p.sq);
+      case 'any':
+        return pieces.map((p) => p.sq);
+      case 'empty-home': {
+        const occupied = new Set(pieces.map((p) => p.sq));
+        const out: number[] = [];
+        for (let sq = 0; sq < 64; sq++) {
+          const r = Math.floor(sq / 8);
+          const home = myColor === 0 ? r <= 1 : r >= 6;
+          if (home && !occupied.has(sq)) out.push(sq);
+        }
+        return out;
+      }
       default:
         return [];
     }
@@ -211,14 +275,68 @@ export default function GameScreen({
 
   const lastMove = useMemo(() => {
     if (moves.length === 0) return null;
+    if (spectating) {
+      const cutoff = serverNow() - SPECTATE_DELAY_MS;
+      const past = moves.filter((m) => Number(m.ts.toMillis()) <= cutoff);
+      if (past.length === 0) return null;
+      const latest = past.reduce((a, b) => (a.seq > b.seq ? a : b));
+      return { from: latest.fromSq, to: latest.toSq };
+    }
     const latest = moves.reduce((a, b) => (a.seq > b.seq ? a : b));
     return { from: latest.fromSq, to: latest.toSq };
-  }, [moves]);
+  }, [moves, spectating, serverNow, tick]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---- moving: tap, drag, premove ----
+  const attemptMove = useCallback(
+    (from: number, to: number) => {
+      if (myMated) {
+        say('You are mated — only a card can save you now');
+        return;
+      }
+      const mover = livePieces.find((p) => p.sq === from);
+      if (!mover) return;
+      if (Number(mover.cooldownUntil.toMillis()) > serverNow()) {
+        // lichess-style premove: queued and fired the instant the piece is ready
+        setPremove({ from, to });
+        return;
+      }
+      setPremove(null);
+      movePiece({ gameId: game.gameId, fromSq: from, toSq: to }).catch((e) => {
+        shake(to);
+        say(rejectionText(e));
+      });
+    },
+    [livePieces, myMated, game.gameId, movePiece, serverNow], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+
+  // premove auto-fire
+  useEffect(() => {
+    if (!premove || spectating) return;
+    const id = setInterval(() => {
+      const mover = livePieces.find((p) => p.sq === premove.from && p.color === myColor);
+      if (!mover) {
+        setPremove(null);
+        return;
+      }
+      if (Number(mover.cooldownUntil.toMillis()) <= serverNow()) {
+        setPremove(null);
+        const lb = livePieces.map((p) => ({ ty: p.ty, color: p.color, sq: p.sq, hasMoved: p.hasMoved }));
+        if (isLegal(lb, premove.from, premove.to, myColor)) {
+          movePiece({ gameId: game.gameId, fromSq: premove.from, toSq: premove.to }).catch(() => {});
+        }
+      }
+    }, 80);
+    return () => clearInterval(id);
+  }, [premove, livePieces, myColor, spectating, game.gameId, movePiece, serverNow]);
+
+  const draggable = useMemo(
+    () => (spectating ? new Set<number>() : new Set(livePieces.filter((p) => p.color === myColor).map((p) => p.sq))),
+    [livePieces, myColor, spectating],
+  );
 
   const onSquare = (sq: number) => {
     if (spectating || game.phase !== 1) return;
 
-    // armed card targeting takes priority over movement
     if (armed !== null && armedCard) {
       if (!cardTargets.includes(sq)) {
         disarm();
@@ -236,27 +354,31 @@ export default function GameScreen({
       return;
     }
 
-    if (selected !== null && targets.includes(sq)) {
+    if (premove && sq !== premove.from) setPremove(null);
+
+    if (selected !== null && (targets.includes(sq) || pieces.find((p) => p.sq === selected && Number(p.cooldownUntil.toMillis()) > serverNow()))) {
       const from = selected;
-      setSelected(null);
-      const moverRow = pieces.find((p) => p.sq === from);
-      if (moverRow && Number(moverRow.cooldownUntil.toMillis()) > serverNow()) {
-        shake(from);
+      if (from === sq) {
+        setSelected(null);
         return;
       }
-      if (myMated) {
-        say('You are mated — only a card can save you now');
+      // allow premove targets beyond current legality when the piece is cooling
+      const coolingMover = livePieces.find((p) => p.sq === from && Number(p.cooldownUntil.toMillis()) > serverNow());
+      if (targets.includes(sq) || coolingMover) {
+        setSelected(null);
+        attemptMove(from, sq);
         return;
       }
-      movePiece({ gameId: game.gameId, fromSq: from, toSq: sq }).catch((e) => {
-        shake(sq);
-        say(rejectionText(e));
-      });
-      return;
     }
     const p = pieces.find((q) => q.sq === sq);
     if (p && p.color === myColor) setSelected(sq === selected ? null : sq);
     else setSelected(null);
+  };
+
+  const onDrop = (from: number, to: number) => {
+    if (spectating || game.phase !== 1 || armed !== null) return;
+    setSelected(null);
+    attemptMove(from, to);
   };
 
   // ---- countdown ----
@@ -279,14 +401,17 @@ export default function GameScreen({
   const [confirmResign, setConfirmResign] = useState(false);
 
   const oppGemCount = oppGems ? gemsNow(oppGems.base, Number(oppGems.anchor.toMillis()), serverNow()) : 0;
+  const opponentOnline =
+    spectating || opponentName === 'TimeKeeper' || sessions.some((s) => s.accountId === oppId && s.online);
 
   return (
-    <div className="game-stage">
-      <header className="game-bar">
+    <div className="game-stage game-grid">
+      <header className="game-bar area-head">
         <span className="bar-name">
           {spectating ? (
             <>
               {game.whiteName} <em className="vs-dim">vs</em> {game.blackName}
+              <span className="badge badge-dim">delayed 15s</span>
             </>
           ) : (
             <>
@@ -333,7 +458,7 @@ export default function GameScreen({
         </span>
       </header>
 
-      <div className="board-wrap">
+      <div className="board-wrap area-board">
         <BoardSvg
           pieces={pieces}
           flipped={!amWhite}
@@ -342,10 +467,14 @@ export default function GameScreen({
           cardTargets={cardTargets}
           flashes={flashes}
           lastMove={lastMove}
+          premove={premove}
           checkSq={checkSq}
           shakeSq={shakeSq}
+          stasisIds={stasisIds}
           serverNow={serverNow}
           onSquare={onSquare}
+          onDrop={onDrop}
+          draggable={draggable}
           frozen={myMated}
           theme={theme}
         />
@@ -358,6 +487,9 @@ export default function GameScreen({
           </div>
         )}
 
+        {!opponentOnline && !finished && (
+          <div className="dc-banner">📡 {opponentName} disconnected — auto-win if they don't return</div>
+        )}
         {myMated && !finished && <div className="mate-banner">⛓ MATED — your king is trapped</div>}
         {myCheck && !myMated && !finished && <div className="check-chip">CHECK</div>}
         {armedCard && (
@@ -369,7 +501,7 @@ export default function GameScreen({
       </div>
 
       {spectating ? (
-        <footer className="game-foot">
+        <footer className="game-foot area-foot">
           <div className="foot-row">
             <span className="bar-name">spectating</span>
             <span className="spec-gem-row">
@@ -379,11 +511,14 @@ export default function GameScreen({
           </div>
         </footer>
       ) : (
-        <footer className="game-foot">
+        <footer className="game-foot area-foot">
           <div className="foot-row">
             <span className="bar-name">
               {me.username}
               <span className="badge badge-dim">{amWhite ? 'white' : 'black'}</span>
+            </span>
+            <span className="deck-chip" title="deck · discard">
+              🂠 {deckCount} · 🗑 {discardCount}
             </span>
             {myGems && (
               <GemMeter base={myGems.base} anchorMs={Number(myGems.anchor.toMillis())} serverNow={serverNow} />
@@ -423,13 +558,14 @@ function gemsFor(
   return r ? gemsNow(r.base, Number(r.anchor.toMillis()), serverNow()) : 0;
 }
 
-function ResultModalSpec({ game, onExit }: { game: Game; onExit: () => void }) {
-  const winner = game.result === 1 ? game.whiteName : game.result === 2 ? game.blackName : null;
+function ResultModal({ game, amWhite, onExit }: { game: Game; amWhite: boolean; onExit: () => void }) {
+  const iWon = (game.result === 1 && amWhite) || (game.result === 2 && !amWhite);
+  const draw = game.result === 3;
   const reason = ['', 'king captured', 'resignation', 'abandonment', 'agreement'][game.resultReason] ?? '';
   return (
     <div className="modal-veil">
-      <div className="result-card is-draw">
-        <div className="result-title">{winner ? `${winner} WINS` : 'DRAW'}</div>
+      <div className={`result-card ${draw ? 'is-draw' : iWon ? 'is-win' : 'is-loss'}`}>
+        <div className="result-title">{draw ? 'DRAW' : iWon ? 'VICTORY' : 'DEFEAT'}</div>
         <div className="result-sub">{reason}</div>
         <button className="btn btn-gold" onClick={onExit}>
           Back to lobby
@@ -439,14 +575,13 @@ function ResultModalSpec({ game, onExit }: { game: Game; onExit: () => void }) {
   );
 }
 
-function ResultModal({ game, amWhite, onExit }: { game: Game; amWhite: boolean; onExit: () => void }) {
-  const iWon = (game.result === 1 && amWhite) || (game.result === 2 && !amWhite);
-  const draw = game.result === 3;
+function ResultModalSpec({ game, onExit }: { game: Game; onExit: () => void }) {
+  const winner = game.result === 1 ? game.whiteName : game.result === 2 ? game.blackName : null;
   const reason = ['', 'king captured', 'resignation', 'abandonment', 'agreement'][game.resultReason] ?? '';
   return (
     <div className="modal-veil">
-      <div className={`result-card ${draw ? 'is-draw' : iWon ? 'is-win' : 'is-loss'}`}>
-        <div className="result-title">{draw ? 'DRAW' : iWon ? 'VICTORY' : 'DEFEAT'}</div>
+      <div className="result-card is-draw">
+        <div className="result-title">{winner ? `${winner} WINS` : 'DRAW'}</div>
         <div className="result-sub">{reason}</div>
         <button className="btn btn-gold" onClick={onExit}>
           Back to lobby
@@ -466,6 +601,12 @@ function aimHint(target: string): string {
       return 'pick an enemy piece';
     case 'own-two':
       return 'pick two ready pieces';
+    case 'own-pawn':
+      return 'pick one of your pawns';
+    case 'any':
+      return 'pick any piece';
+    case 'empty-home':
+      return 'pick an empty square on your first two ranks';
     default:
       return '';
   }
@@ -474,11 +615,16 @@ function aimHint(target: string): string {
 function cardError(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e);
   if (msg.includes('NOT_ENOUGH_GEMS')) return 'Not enough gems';
-  if (msg.includes('already shielded') || msg.includes('Already shielded')) return 'Already shielded';
+  if (msg.includes('Already shielded')) return 'Already shielded';
   if (msg.includes('already ready')) return 'That piece is already ready';
   if (msg.includes('LeavesKingAttacked')) return 'Your king would fall';
   if (msg.includes('no gems')) return 'Opponent has no gems';
   if (msg.includes('must be ready')) return 'Both pieces must be ready';
+  if (msg.includes("haven't lost")) return "You haven't lost a piece yet";
+  if (msg.includes('home ranks')) return 'Only on your two home ranks';
+  if (msg.includes('pawns can be duplicated')) return 'Only pawns can be duplicated';
+  if (msg.includes('Nothing is cooling')) return 'Nothing is cooling down';
+  if (msg.includes('stasis')) return 'Locked in stasis';
   return 'Cannot play that card';
 }
 
@@ -486,7 +632,10 @@ function rejectionText(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e);
   if (msg.includes('COOLDOWN')) return 'Still on cooldown';
   if (msg.includes('FROZEN_MATED')) return 'You are mated!';
+  if (msg.includes('STASIS')) return 'Locked in stasis';
+  if (msg.includes('stasis')) return 'Target is locked in stasis';
   if (msg.includes('LeavesKingAttacked')) return 'Your king would fall';
+  if (msg.includes('TOO_FAST')) return 'Too fast!';
   if (msg.includes('not live')) return 'Game over';
   return 'Illegal move';
 }

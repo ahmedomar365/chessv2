@@ -49,7 +49,7 @@ export interface Flash {
   id: number;
   sq: number;
   /** css color keyword used by the flash ring */
-  tone: 'gold' | 'ember' | 'teal';
+  tone: 'gold' | 'ember' | 'teal' | 'violet';
 }
 
 export interface BoardProps {
@@ -61,11 +61,18 @@ export interface BoardProps {
   cardTargets: readonly number[];
   flashes: readonly Flash[];
   lastMove: { from: number; to: number } | null;
+  premove: { from: number; to: number } | null;
   checkSq: number | null;
   shakeSq: number | null;
+  /** piece ids currently locked in stasis */
+  stasisIds: ReadonlySet<string>;
   /** serverNow() - returns estimated server time in ms */
   serverNow: () => number;
   onSquare: (sq: number) => void;
+  /** drag-and-drop release: from → to (only fired when actually dragged) */
+  onDrop?: (from: number, to: number) => void;
+  /** squares whose pieces the local player may drag */
+  draggable?: ReadonlySet<number>;
   frozen: boolean;
   theme?: Theme;
 }
@@ -79,20 +86,32 @@ const xyOf = (sq: number, flipped: boolean) => {
 };
 
 export default function BoardSvg(props: BoardProps) {
-  const { pieces, flipped, selected, targets, cardTargets, flashes, lastMove, checkSq, shakeSq, onSquare, frozen } = props;
+  const { pieces, flipped, selected, targets, cardTargets, flashes, lastMove, premove, checkSq, shakeSq, stasisIds, onSquare, onDrop, draggable, frozen } = props;
   const theme = props.theme ?? THEMES[0];
   const svgRef = useRef<SVGSVGElement>(null);
+  const [drag, setDrag] = useState<{ from: number; x: number; y: number; moved: boolean } | null>(null);
 
-  const squareFromEvent = (e: React.PointerEvent): number | null => {
+  const squareFromXY = (clientX: number, clientY: number): number | null => {
     const el = svgRef.current;
     if (!el) return null;
     const rect = el.getBoundingClientRect();
-    const fx = Math.floor(((e.clientX - rect.left) / rect.width) * 8);
-    const fy = Math.floor(((e.clientY - rect.top) / rect.height) * 8);
+    const fx = Math.floor(((clientX - rect.left) / rect.width) * 8);
+    const fy = Math.floor(((clientY - rect.top) / rect.height) * 8);
     if (fx < 0 || fx > 7 || fy < 0 || fy > 7) return null;
     const f = flipped ? 7 - fx : fx;
     const r = flipped ? fy : 7 - fy;
     return r * 8 + f;
+  };
+
+  /** board-space coords (0..800) for the drag ghost */
+  const boardXY = (clientX: number, clientY: number) => {
+    const el = svgRef.current;
+    if (!el) return { x: 0, y: 0 };
+    const rect = el.getBoundingClientRect();
+    return {
+      x: ((clientX - rect.left) / rect.width) * 800,
+      y: ((clientY - rect.top) / rect.height) * 800,
+    };
   };
 
   return (
@@ -102,9 +121,29 @@ export default function BoardSvg(props: BoardProps) {
       viewBox="0 0 800 800"
       style={themeVars(theme, 'live')}
       onPointerDown={(e) => {
-        const sq = squareFromEvent(e);
-        if (sq !== null) onSquare(sq);
+        const sq = squareFromXY(e.clientX, e.clientY);
+        if (sq === null) return;
+        onSquare(sq);
+        if (draggable?.has(sq)) {
+          const { x, y } = boardXY(e.clientX, e.clientY);
+          setDrag({ from: sq, x, y, moved: false });
+          svgRef.current?.setPointerCapture(e.pointerId);
+        }
       }}
+      onPointerMove={(e) => {
+        if (!drag) return;
+        const { x, y } = boardXY(e.clientX, e.clientY);
+        setDrag({ ...drag, x, y, moved: true });
+      }}
+      onPointerUp={(e) => {
+        if (!drag) return;
+        const to = squareFromXY(e.clientX, e.clientY);
+        const from = drag.from;
+        const moved = drag.moved;
+        setDrag(null);
+        if (moved && to !== null && to !== from) onDrop?.(from, to);
+      }}
+      onPointerCancel={() => setDrag(null)}
     >
       <ThemeDefs theme={theme} prefix="live" />
       {/* squares */}
@@ -117,6 +156,9 @@ export default function BoardSvg(props: BoardProps) {
             <rect x={x} y={y} width={SQ} height={SQ} className={dark ? 'sq-dark' : 'sq-light'} />
             {isLast && <rect x={x} y={y} width={SQ} height={SQ} className="sq-last" />}
             {selected === sq && <rect x={x} y={y} width={SQ} height={SQ} className="sq-selected" />}
+            {premove !== null && (premove.from === sq || premove.to === sq) && (
+              <rect x={x + 3} y={y + 3} width={SQ - 6} height={SQ - 6} className="sq-premove" />
+            )}
           </g>
         );
       })}
@@ -143,15 +185,25 @@ export default function BoardSvg(props: BoardProps) {
       {[...pieces]
         .sort((a, b) => Number(a.pieceId - b.pieceId))
         .map((p) => {
-          const { x, y } = xyOf(p.sq, flipped);
+          const dragging = drag !== null && drag.moved && drag.from === p.sq;
+          const { x, y } = dragging
+            ? { x: drag.x - 50, y: drag.y - 50 }
+            : xyOf(p.sq, flipped);
+          const inStasis = stasisIds.has(p.pieceId.toString());
           return (
             <g
               key={p.pieceId.toString()}
-              className={`piece-slot ${shakeSq === p.sq ? 'piece-shake' : ''}`}
+              className={`piece-slot ${shakeSq === p.sq ? 'piece-shake' : ''} ${dragging ? 'piece-dragging' : ''}`}
               style={{ transform: `translate(${x}px, ${y}px)` }}
             >
               <PieceGlyph ty={p.ty} color={p.color} />
               {p.shielded && <circle cx={50} cy={50} r={46} className="shield-bubble" />}
+              {inStasis && (
+                <g className="stasis-crystal">
+                  <circle cx={50} cy={50} r={45} className="stasis-ring" />
+                  <path d="M50 8 L66 50 L50 92 L34 50 Z" className="stasis-shard" />
+                </g>
+              )}
               <CooldownRing piece={p} serverNow={props.serverNow} />
             </g>
           );

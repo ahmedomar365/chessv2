@@ -9,9 +9,23 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>,
 )
 
-// PWA: offline shell + installability (production only)
+// PWA + seamless updates: a new deploy never logs anyone out (the auth token
+// lives in localStorage) and never interrupts a live game — the refreshed
+// shell is applied when the player is back in the lobby or the tab is hidden.
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  window.addEventListener('load', async () => {
+    try {
+      const reg = await navigator.serviceWorker.register('/sw.js');
+      // check for a new version every few minutes
+      setInterval(() => reg.update().catch(() => {}), 5 * 60_000);
+      let refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (refreshing) return;
+        window.dispatchEvent(new CustomEvent('chessv2:update-ready'));
+        refreshing = true;
+      });
+    } catch {
+      /* offline support is best-effort */
+    }
   });
 }

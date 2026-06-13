@@ -45,6 +45,14 @@ function Shell() {
 
   const [route, setRoute] = useState<Route>({ kind: 'lobby' });
 
+  // Apply pending app updates only when it's safe (never mid-game).
+  const [updateReady, setUpdateReady] = useState(false);
+  useEffect(() => {
+    const onReady = () => setUpdateReady(true);
+    window.addEventListener('chessv2:update-ready', onReady);
+    return () => window.removeEventListener('chessv2:update-ready', onReady);
+  }, []);
+
   // Sticky game routing: stay on the game screen after it finishes so the
   // result modal can be shown; "Back to lobby" clears it.
   const [stickyGameId, setStickyGameId] = useState<bigint | null>(null);
@@ -62,6 +70,12 @@ function Shell() {
     }
     return undefined;
   }, [me, myLiveGame, stickyGameId, games]);
+
+  useEffect(() => {
+    if (updateReady && !currentGame) {
+      window.location.reload();
+    }
+  }, [updateReady, currentGame]);
 
   if (connectionError) {
     return (

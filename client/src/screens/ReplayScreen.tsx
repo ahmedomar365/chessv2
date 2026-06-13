@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Timestamp } from 'spacetimedb';
 import { useTable } from 'spacetimedb/react';
 import { tables } from '../module_bindings';
-import type { Piece } from '../module_bindings/types';
 import BoardSvg from '../game/BoardSvg';
 import { accuracy, gradeMoves, START_SNAPSHOT, type Grade } from '../game/judge';
+import { piecesFromSnapshot } from '../game/snapshot';
 
 const GRADE_LABEL: Record<Grade, string> = {
   brilliant: '✨ Brilliant',
@@ -13,27 +12,6 @@ const GRADE_LABEL: Record<Grade, string> = {
   inaccuracy: '?! Inaccuracy',
   blunder: '?? Blunder',
 };
-
-/** Rebuild Piece-shaped rows from a 64-char snapshot for BoardSvg. */
-function piecesFromSnapshot(snap: string, gameId: bigint): Piece[] {
-  const out: Piece[] = [];
-  for (let sq = 0; sq < 64; sq++) {
-    const ch = snap[sq];
-    if (!ch || ch === '.') continue;
-    const ty = { p: 0, n: 1, b: 2, r: 3, q: 4, k: 5 }[ch.toLowerCase()] ?? 5;
-    out.push({
-      pieceId: BigInt(sq + 1),
-      gameId,
-      ty,
-      color: ch === ch.toUpperCase() ? 0 : 1,
-      sq,
-      hasMoved: false,
-      cooldownUntil: new Timestamp(0n),
-      shielded: false,
-    } as Piece);
-  }
-  return out;
-}
 
 export default function ReplayScreen({ gameId, onBack }: { gameId: bigint; onBack: () => void }) {
   const [games] = useTable(tables.game.where((r) => r.gameId.eq(gameId)));
@@ -100,8 +78,10 @@ export default function ReplayScreen({ gameId, onBack }: { gameId: bigint; onBac
           cardTargets={[]}
           flashes={[]}
           lastMove={lastMove}
+          premove={null}
           checkSq={null}
           shakeSq={null}
+          stasisIds={new Set()}
           serverNow={() => 0}
           onSquare={() => {}}
           frozen={false}

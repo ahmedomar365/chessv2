@@ -46,19 +46,21 @@ export function CardHand({
         return (
           <button
             key={`${i}-${cardId}`}
-            className={`card-tile ${armed ? 'card-armed' : ''} ${passive ? 'card-passive' : ''} ${
+            className={`card-tile rarity-${meta.rarity} ${armed ? 'card-armed' : ''} ${passive ? 'card-passive' : ''} ${
               !passive && !affordable ? 'card-poor' : ''
             }`}
             disabled={passive}
             onClick={() => onArm(armed ? null : i)}
           >
-            <span className="card-icon">{meta.icon}</span>
-            <span className="card-name">{meta.name}</span>
             {passive ? (
-              <span className="card-cost card-cost-passive">auto</span>
+              <span className="card-cost card-cost-passive">AUTO</span>
             ) : (
-              <span className="card-cost">{meta.cost}◆</span>
+              <span className="card-cost">{meta.cost}</span>
             )}
+            <span className="card-art">
+              <span className="card-icon">{meta.icon}</span>
+            </span>
+            <span className="card-name">{meta.name}</span>
             <span className="card-blurb">{meta.blurb}</span>
           </button>
         );
