@@ -147,6 +147,17 @@ pub fn seed_new_account(ctx: &ReducerContext, account_id: u64) {
     });
 }
 
+/// Delete all economy data for an account (called by admin_delete_account).
+pub fn purge_account(ctx: &ReducerContext, account_id: u64) {
+    ctx.db.wallet().account_id().delete(account_id);
+    let cards: Vec<u64> = ctx.db.card_ownership().account_id().filter(account_id).map(|c| c.id).collect();
+    for cid in cards { ctx.db.card_ownership().id().delete(cid); }
+    let loadouts: Vec<u64> = ctx.db.loadout().account_id().filter(account_id).map(|l| l.loadout_id).collect();
+    for lid in loadouts { ctx.db.loadout().loadout_id().delete(lid); }
+    let skins: Vec<u64> = ctx.db.skin_ownership().account_id().filter(account_id).map(|s| s.id).collect();
+    for sid in skins { ctx.db.skin_ownership().id().delete(sid); }
+}
+
 /// Grants 1 copy of any card released after the account was created.
 /// Idempotent — called on every session bind.
 pub fn backfill_collection(ctx: &ReducerContext, account_id: u64) {

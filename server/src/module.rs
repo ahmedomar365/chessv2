@@ -433,6 +433,41 @@ pub fn logout(ctx: &ReducerContext) {
     }
 }
 
+// ---------------- admin ----------------
+
+/// ADMIN ONLY: fully purge an account by username — used to clear test
+/// accounts off the live leaderboard. Refuses to delete an account that is
+/// currently in a live game.
+#[reducer]
+pub fn admin_delete_account(ctx: &ReducerContext, username: String) -> Result<(), String> {
+    let admin = spacetimedb::Identity::from_hex(crate::economy::ADMIN_HEX).map_err(|_| "bad admin")?;
+    if ctx.sender() != admin {
+        return Err("Forbidden".into());
+    }
+    let acc = ctx.db.account().username_lower().find(&username.to_lowercase())
+        .ok_or("No such account")?;
+    let id = acc.account_id;
+    if crate::game::live_game_of(ctx, id).is_some() {
+        return Err("Account is in a live game".into());
+    }
+
+    // tables owned here in module.rs
+    ctx.db.player_profile().account_id().delete(id);
+    ctx.db.queue_entry().account_id().delete(id);
+    let hist: Vec<u64> = ctx.db.rating_history().account_id().filter(id).map(|h| h.id).collect();
+    for hid in hist { ctx.db.rating_history().id().delete(hid); }
+
+    // tables owned in other modules (their generated traits live there)
+    crate::economy::purge_account(ctx, id);
+    crate::social::purge_account(ctx, id);
+
+    // detach any signed-in sessions, then drop the account
+    let sessions: Vec<Identity> = ctx.db.session().account_id().filter(id).map(|s| s.identity).collect();
+    for sident in sessions { ctx.db.session().identity().delete(sident); }
+    ctx.db.account().account_id().delete(id);
+    Ok(())
+}
+
 // ---------------- lifecycle ----------------
 
 #[reducer(init)]

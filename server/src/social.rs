@@ -256,6 +256,15 @@ fn set_session_status(ctx: &ReducerContext, account_id: u64, status: u8) {
     }
 }
 
+/// Delete all social data for an account (called by admin_delete_account).
+pub fn purge_account(ctx: &ReducerContext, account_id: u64) {
+    let specs: Vec<u64> = ctx.db.spectator().account_id().filter(account_id).map(|s| s.id).collect();
+    for sid in specs {
+        ctx.db.spectator().id().delete(sid);
+    }
+    clear_challenges_for(ctx, account_id);
+}
+
 /// Cleanup hooks used by game lifecycle.
 pub fn clear_challenges_for(ctx: &ReducerContext, account_id: u64) {
     let ids: Vec<u64> = ctx.db.challenge().from_id().filter(account_id).map(|c| c.challenge_id)
