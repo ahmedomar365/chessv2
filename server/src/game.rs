@@ -12,6 +12,10 @@ use crate::rules;
 pub const START_COUNTDOWN_MICROS: i64 = 3_000_000;
 pub const FORFEIT_GRACE_MICROS: i64 = 60_000_000;
 
+/// Spells/cards toggle. When false: no cards or gems are dealt, play_card is
+/// rejected, and the Guardian passive can't trigger — pure real-time chess.
+pub const CARDS_ENABLED: bool = false;
+
 /// Cooldown per piece type (micros): pawn 3s, knight/bishop 5s, rook/king 7s, queen 10s.
 pub fn cooldown_micros(ty: u8) -> i64 {
     match ty {
@@ -294,25 +298,27 @@ fn start_game(ctx: &ReducerContext, white_id: u64, white_name: &str, black_id: u
         });
     }
     // deal cards + anchor gems for both players (from each player's active loadout)
-    for account_id in [white_id, black_id] {
-        let mut deck = crate::economy::active_deck(ctx, account_id);
-        deck.shuffle(&mut ctx.rng());
-        let hand: Vec<u8> = deck.split_off(deck.len() - cards::HAND_SIZE);
-        ctx.db.game_card_state().insert(GameCardState {
-            id: 0,
-            game_id: game.game_id,
-            account_id,
-            deck,
-            hand,
-            discard: Vec::new(),
-        });
-        ctx.db.game_gems().insert(GameGems {
-            id: 0,
-            game_id: game.game_id,
-            account_id,
-            base: 0,
-            anchor: ready_at,
-        });
+    if CARDS_ENABLED {
+        for account_id in [white_id, black_id] {
+            let mut deck = crate::economy::active_deck(ctx, account_id);
+            deck.shuffle(&mut ctx.rng());
+            let hand: Vec<u8> = deck.split_off(deck.len() - cards::HAND_SIZE);
+            ctx.db.game_card_state().insert(GameCardState {
+                id: 0,
+                game_id: game.game_id,
+                account_id,
+                deck,
+                hand,
+                discard: Vec::new(),
+            });
+            ctx.db.game_gems().insert(GameGems {
+                id: 0,
+                game_id: game.game_id,
+                account_id,
+                base: 0,
+                anchor: ready_at,
+            });
+        }
     }
     write_snapshot(ctx, game.game_id, 0);
     ctx.db.game_start_timer().insert(GameStartTimer {
@@ -640,6 +646,9 @@ fn rewind_board(ctx: &ReducerContext, game_id: u64) -> Result<(), String> {
 /// they are the comeback mechanic. targets are squares; 255 = unused.
 #[reducer]
 pub fn play_card(ctx: &ReducerContext, game_id: u64, hand_index: u8, target_a: u8, target_b: u8) -> Result<(), String> {
+    if !CARDS_ENABLED {
+        return Err("Spells are disabled".into());
+    }
     let s = logged_in(ctx)?;
     let game = ctx.db.game().game_id().find(game_id).ok_or("No such game")?;
     if game.phase != 1 {

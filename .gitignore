@@ -25,3 +25,6 @@ lobby-desktop.png
 # Deploy config (contains server address)
 .deploy.env
 .playwright-mcp/
+
+# stray screenshots
+*.png

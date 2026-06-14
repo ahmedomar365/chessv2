@@ -12,14 +12,13 @@ export default function Lobby({
   sessions,
   games,
   onOpenProfile,
-  onOpenCollection,
 }: {
   me: Session;
   sessions: readonly Session[];
   games: readonly Game[];
   onOpenProfile: (accountId: bigint) => void;
   onOpenShop?: () => void; // shop hidden for now; prop kept for easy re-enable
-  onOpenCollection: () => void;
+  onOpenCollection?: () => void; // cards hidden for now; prop kept for re-enable
 }) {
   const joinQueue = useReducer(reducers.joinQueue);
   const leaveQueue = useReducer(reducers.leaveQueue);
@@ -131,9 +130,10 @@ export default function Lobby({
             <button className="btn btn-ghost" onClick={onOpenShop}>
               🛒 Shop
             </button> */}
+            {/* Cards & Loadouts hidden while spells are disabled — re-enable:
             <button className="btn btn-ghost" onClick={onOpenCollection}>
               🃏 Cards & Loadouts
-            </button>
+            </button> */}
             <button className="btn btn-ghost" onClick={() => setShowTutorial(true)}>
               📖 How to play
             </button>

@@ -9,6 +9,9 @@ import { legalTargets, isLegal, type LPiece } from '../game/legal';
 import { themeById } from '../game/themes';
 import ChatPanel from '../components/ChatPanel';
 
+/** Spells/cards toggle — must match CARDS_ENABLED in server/src/game.rs. */
+const CARDS_ENABLED = false;
+
 export default function GameScreen({
   game,
   me,
@@ -395,7 +398,7 @@ export default function GameScreen({
             <>
               {opponentName}
               {oppMated && <span className="badge badge-gold">MATED</span>}
-              <span className="opp-gems">◆ {oppGemCount}</span>
+              {CARDS_ENABLED && <span className="opp-gems">◆ {oppGemCount}</span>}
             </>
           )}
           {specCount > 0 && <span className="spec-count">👁 {specCount}</span>}
@@ -483,10 +486,12 @@ export default function GameScreen({
         <footer className="game-foot area-foot">
           <div className="foot-row">
             <span className="bar-name">spectating</span>
-            <span className="spec-gem-row">
-              <span className="spec-gem">⬜ ◆ {gemsFor(gemRows, game.whiteId, serverNow)}</span>
-              <span className="spec-gem">⬛ ◆ {gemsFor(gemRows, game.blackId, serverNow)}</span>
-            </span>
+            {CARDS_ENABLED && (
+              <span className="spec-gem-row">
+                <span className="spec-gem">⬜ ◆ {gemsFor(gemRows, game.whiteId, serverNow)}</span>
+                <span className="spec-gem">⬛ ◆ {gemsFor(gemRows, game.blackId, serverNow)}</span>
+              </span>
+            )}
           </div>
         </footer>
       ) : (
@@ -496,19 +501,23 @@ export default function GameScreen({
               {me.username}
               <span className="badge badge-dim">{amWhite ? 'white' : 'black'}</span>
             </span>
-            <span className="deck-chip" title="deck · discard">
-              🂠 {deckCount} · 🗑 {discardCount}
-            </span>
-            {myGems && (
+            {CARDS_ENABLED && (
+              <span className="deck-chip" title="deck · discard">
+                🂠 {deckCount} · 🗑 {discardCount}
+              </span>
+            )}
+            {CARDS_ENABLED && myGems && (
               <GemMeter base={myGems.base} anchorMs={Number(myGems.anchor.toMillis())} serverNow={serverNow} />
             )}
           </div>
-          <CardHand
-            hand={hand}
-            gems={myGems ? gemsNow(myGems.base, Number(myGems.anchor.toMillis()), serverNow()) : 0}
-            armedIndex={armed}
-            onArm={onArm}
-          />
+          {CARDS_ENABLED && (
+            <CardHand
+              hand={hand}
+              gems={myGems ? gemsNow(myGems.base, Number(myGems.anchor.toMillis()), serverNow()) : 0}
+              armedIndex={armed}
+              onArm={onArm}
+            />
+          )}
         </footer>
       )}
 
