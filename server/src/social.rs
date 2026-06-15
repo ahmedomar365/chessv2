@@ -60,8 +60,6 @@ pub struct Spectator {
     pub username: String,
 }
 
-/// Soft profanity filter — masks listed words, never blocks the message.
-/// ASCII-only: lowercase of multibyte text can shift byte offsets.
 /// Common TLDs / shortener endings used to detect bare domains.
 const LINK_TLDS: [&str; 42] = [
     "com", "net", "org", "io", "gg", "ly", "me", "co", "xyz", "link", "app", "dev", "gl", "info",
@@ -70,14 +68,50 @@ const LINK_TLDS: [&str; 42] = [
     "download", "stream",
 ];
 
-/// Our own domain is allowed (e.g. someone sharing chessv2.com).
-fn is_allowed_link(lower_tok: &str) -> bool {
-    lower_tok.contains("chessv2.com") && !lower_tok.contains("chessv2.com.")
+/// TLDs distinctive enough to flag even when split off as their own word
+/// ("kemono .cr", "site . com"). Excludes common English words (to/me/co/in).
+const BARE_TLDS: [&str; 16] = [
+    "com", "net", "org", "cr", "xyz", "info", "online", "site", "shop", "click", "buzz", "top",
+    "ru", "cn", "xxx", "su",
+];
+
+/// Adult / scam spam terms — a message containing any (after stripping spaces,
+/// punctuation, and zero-width chars) is rejected outright.
+const HARD_SPAM: [&str; 14] = [
+    "youporn", "porn", "kemono", "onlyfans", "xvideos", "xnxx", "pornhub", "hentai", "escort",
+    "camgirl", "sexcam", "nudes", "leakedof", "teenvids",
+];
+
+/// Strip zero-width / bidi / invisible characters used to break up banned words.
+fn strip_invisible(s: &str) -> String {
+    s.chars()
+        .filter(|c| {
+            !matches!(*c,
+                '\u{00ad}' | '\u{200b}'..='\u{200f}' | '\u{202a}'..='\u{202e}'
+                | '\u{2060}' | '\u{2066}'..='\u{2069}' | '\u{feff}')
+        })
+        .collect()
+}
+
+/// Lowercase, drop everything but letters/digits (collapses spacing & punctuation).
+fn alnum_lower(s: &str) -> String {
+    strip_invisible(s).chars().filter(|c| c.is_ascii_alphanumeric()).flat_map(|c| c.to_lowercase()).collect()
+}
+
+/// Trim non-alphanumerics off both ends of a token; lowercase.
+fn token_core(tok: &str) -> String {
+    tok.trim_matches(|c: char| !c.is_ascii_alphanumeric()).to_lowercase()
+}
+
+/// Hard block: adult/scam spam that survives spacing/zero-width evasions.
+fn spam_blocked(text: &str) -> bool {
+    let n = alnum_lower(text);
+    HARD_SPAM.iter().any(|t| n.contains(t))
 }
 
 /// Does this token look like a URL or bare domain?
 fn looks_like_link(tok: &str) -> bool {
-    let l = tok.to_lowercase();
+    let l = strip_invisible(tok).to_lowercase();
     if l.contains("://") || l.starts_with("www.") {
         return true;
     }
@@ -99,46 +133,71 @@ fn looks_like_link(tok: &str) -> bool {
     false
 }
 
-/// Mask links/domains in chat to curb spam, after undoing common evasions
-/// ("rebrand dot ly", "rebrand[.]ly", "hxxp://"). Keeps chessv2.com itself.
+/// True if any token (or token pair like "kemono .cr") forms a link/domain.
+fn contains_link(text: &str) -> bool {
+    let mut norm = strip_invisible(text);
+    for pat in [" dot ", " DOT ", "(dot)", "(DOT)", "[dot]", "[.]", "(.)", "{.}"] {
+        norm = norm.replace(pat, ".");
+    }
+    norm = norm.replace("hxxp", "http").replace("hXXp", "http");
+    let toks: Vec<&str> = norm.split_whitespace().collect();
+    for (i, tok) in toks.iter().enumerate() {
+        let c = token_core(tok);
+        if looks_like_link(tok) || looks_like_link(&c) {
+            return true;
+        }
+        // split domain: "<word> com" / "<word> .cr"
+        if BARE_TLDS.contains(&c.as_str())
+            && i > 0
+            && token_core(toks[i - 1]).len() >= 3
+            && token_core(toks[i - 1]).chars().all(|ch| ch.is_ascii_alphanumeric())
+        {
+            return true;
+        }
+    }
+    false
+}
+
+/// Mask ALL links/domains in chat to curb spam, after undoing common evasions.
+/// No domain is whitelisted — players have no reason to post links.
 fn strip_links(text: &str) -> String {
-    let mut norm = text.to_string();
+    let mut norm = strip_invisible(text);
     for pat in [" dot ", " DOT ", "(dot)", "(DOT)", "[dot]", "[.]", "(.)", "{.}"] {
         norm = norm.replace(pat, ".");
     }
     norm = norm.replace("hxxp", "http").replace("hXXp", "http");
 
+    let toks: Vec<&str> = norm.split_whitespace().collect();
     let mut out: Vec<String> = Vec::new();
-    for tok in norm.split_whitespace() {
-        if looks_like_link(tok) && !is_allowed_link(&tok.to_lowercase()) {
+    for (i, tok) in toks.iter().enumerate() {
+        let c = token_core(tok);
+        let bare = BARE_TLDS.contains(&c.as_str())
+            && i > 0
+            && token_core(toks[i - 1]).len() >= 3
+            && token_core(toks[i - 1]).chars().all(|ch| ch.is_ascii_alphanumeric());
+        if looks_like_link(tok) || looks_like_link(&c) || bare {
+            if bare {
+                if let Some(last) = out.last_mut() {
+                    *last = "⟨link removed⟩".to_string();
+                }
+            }
             out.push("⟨link removed⟩".to_string());
         } else {
-            out.push(tok.to_string());
+            out.push((*tok).to_string());
         }
     }
     out.join(" ")
 }
 
+/// Mask profanity robustly via rustrict (handles leetspeak, spacing, accents).
+/// Censors profane/offensive/sexual words to asterisks; never blocks.
 fn clean_text(text: &str) -> String {
-    if !text.is_ascii() {
-        return text.to_string();
-    }
-    const BAD: [&str; 8] = ["fuck", "shit", "bitch", "asshole", "cunt", "nigger", "faggot", "whore"];
-    let mut out = text.to_string();
-    let lower = out.to_lowercase();
-    for w in BAD {
-        let mut start = 0;
-        while let Some(pos) = lower[start..].find(w) {
-            let at = start + pos;
-            out.replace_range(at..at + w.len(), &"*".repeat(w.len()));
-            start = at + w.len();
-        }
-    }
-    out
+    use rustrict::CensorStr;
+    text.censor()
 }
 
-/// ADMIN ONLY: delete existing chat messages that contain links (cleans up
-/// spam posted before the link filter existed).
+/// ADMIN ONLY: delete existing chat messages that contain links or spam
+/// (cleans up anything posted before/around the filter being strengthened).
 #[reducer]
 pub fn admin_purge_link_chat(ctx: &ReducerContext) -> Result<(), String> {
     let admin = spacetimedb::Identity::from_hex(crate::economy::ADMIN_HEX).map_err(|_| "bad admin")?;
@@ -146,7 +205,7 @@ pub fn admin_purge_link_chat(ctx: &ReducerContext) -> Result<(), String> {
         return Err("Forbidden".into());
     }
     let ids: Vec<u64> = ctx.db.chat_message().iter()
-        .filter(|m| m.text.contains("://") || looks_like_link(&m.text))
+        .filter(|m| spam_blocked(&m.text) || contains_link(&m.text) || m.text.contains("⟨link removed⟩"))
         .map(|m| m.msg_id)
         .collect();
     for id in ids {
@@ -164,6 +223,10 @@ pub fn send_chat(ctx: &ReducerContext, channel: u8, game_id: u64, text: String) 
     }
     if trimmed.chars().count() > CHAT_MAX_LEN {
         return Err("Message too long".into());
+    }
+    // hard block adult/scam spam (survives spacing & zero-width evasions)
+    if spam_blocked(trimmed) {
+        return Err("BLOCKED".into());
     }
     // throttle
     if let Some(t) = ctx.db.chat_throttle().account_id().find(s.account_id) {

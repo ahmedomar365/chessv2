@@ -10,7 +10,10 @@ export function connectionBuilder() {
     .withUri(URI)
     .withDatabaseName(DB)
     .withToken(localStorage.getItem(TOKEN_KEY) ?? undefined)
-    .onConnect((_conn, _identity, token) => {
+    .onConnect((_conn, identity, token) => {
       localStorage.setItem(TOKEN_KEY, token);
+      // authoritative connection identity (the useSpacetimeDB hook is unreliable
+      // here); the auth screen reads this to clear the reCAPTCHA human-gate.
+      (window as unknown as { __stdbIdentity?: string }).__stdbIdentity = identity.toHexString();
     });
 }

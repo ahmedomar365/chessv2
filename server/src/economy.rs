@@ -81,6 +81,43 @@ pub struct OperatorConfig {
     pub operator: Identity,
 }
 
+/// Identities the payment service has confirmed as human (reCAPTCHA v3).
+/// A row is consumed on the next successful registration.
+#[table(accessor = human_verified)]
+pub struct HumanVerified {
+    #[primary_key]
+    pub identity: Identity,
+    pub ts: Timestamp,
+}
+
+/// PAYMENT SERVICE ONLY: mark a connection identity (passed as a hex string,
+/// to keep the HTTP call simple) as human after the service has verified its
+/// reCAPTCHA token with Google.
+#[reducer]
+pub fn mark_human(ctx: &ReducerContext, identity_hex: String) -> Result<(), String> {
+    let op = ctx.db.operator_config().key().find(0u8).ok_or("No operator configured")?;
+    if ctx.sender() != op.operator {
+        return Err("Forbidden".into());
+    }
+    let identity = Identity::from_hex(identity_hex.trim_start_matches("0x"))
+        .map_err(|_| "bad identity")?;
+    if ctx.db.human_verified().identity().find(identity).is_none() {
+        ctx.db.human_verified().insert(HumanVerified { identity, ts: ctx.timestamp });
+    }
+    Ok(())
+}
+
+/// Consume a human-verification token for `identity` (true if one existed).
+/// Registration calls this so each new account needs a fresh reCAPTCHA pass.
+pub fn take_human(ctx: &ReducerContext, identity: Identity) -> bool {
+    if ctx.db.human_verified().identity().find(identity).is_some() {
+        ctx.db.human_verified().identity().delete(identity);
+        true
+    } else {
+        false
+    }
+}
+
 /// Completed PayPal purchases — order id uniqueness = idempotency.
 #[table(accessor = purchase)]
 pub struct Purchase {

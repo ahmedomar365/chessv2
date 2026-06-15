@@ -80,6 +80,8 @@ export default function AuthScreen() {
 function humanize(e: unknown): string {
   const msg = e instanceof Error ? e.message : String(e);
   if (msg.includes('Wrong password')) return 'That name is taken and the password does not match';
-  const m = msg.match(/(?:Error: )?([^:]*(?:Username|Password|Account|Too many)[^.]*)/);
+  if (msg.includes('NEED_HUMAN')) return 'Could not verify you are human — please try again';
+  if (msg.includes('not allowed')) return "That username isn't allowed — pick another";
+  const m = msg.match(/(?:Error: )?([^:]*(?:Username|Password|Account|Too many|allowed)[^.]*)/);
   return m ? m[1].trim() : 'Could not sign in — try again';
 }

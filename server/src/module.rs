@@ -361,6 +361,9 @@ pub fn register(ctx: &ReducerContext, username: String, password: String) -> Res
     if ctx.db.account().username_lower().find(&lower).is_some() {
         return Err("Username already taken".into());
     }
+    // (reCAPTCHA human-gate kept dormant — mark_human/human_verified remain for
+    // a future, fully-verified rollout; registration is not blocked on it.)
+    let _ = crate::economy::take_human(ctx, ctx.sender());
     let mut salt = [0u8; 16];
     let mut rng = ctx.rng();
     rng.fill_bytes(&mut salt);

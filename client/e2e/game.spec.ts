@@ -15,8 +15,34 @@ async function newPlayer(browser: Browser, testInfo: { project: { use: Record<st
   return ctx.newPage();
 }
 
+/**
+ * Clear the reCAPTCHA human-gate for this browser's identity using the
+ * operator token from the local env (STDB_OPERATOR_TOKEN). The token never
+ * touches prod config — it's only in the test runner's environment.
+ */
+async function clearHumanGate(page: Page) {
+  const op = process.env.STDB_OPERATOR_TOKEN;
+  if (!op) return; // gate not exercised when token absent
+  const id = await page.evaluate(async () => {
+    let v: string | undefined;
+    for (let i = 0; i < 60 && !v; i++) {
+      v = (window as unknown as { __stdbIdentity?: string }).__stdbIdentity;
+      if (!v) await new Promise((r) => setTimeout(r, 100));
+    }
+    return v;
+  });
+  if (!id) return;
+  await fetch('https://maincloud.spacetimedb.com/v1/database/chessv2/call/mark_human', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${op}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify([id]),
+  });
+}
+
 async function register(page: Page, name: string) {
   await page.goto('/');
+  await expect(page.getByRole('button', { name: 'ENTER' })).toBeVisible({ timeout: 20_000 });
+  await clearHumanGate(page);
   await page.getByRole('textbox', { name: 'Username' }).fill(name);
   await page.getByRole('textbox', { name: 'Password' }).fill('e2e_password');
   await page.getByRole('button', { name: 'ENTER' }).click();

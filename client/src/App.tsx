@@ -33,6 +33,12 @@ function Shell() {
   const [games] = useTable(tables.game);
   const [spectators] = useTable(tables.spectator);
 
+  // expose the connection identity so the auth screen can clear the human-gate
+  // (it's the user's own anonymous id — already in their local token)
+  if (identity) {
+    (window as unknown as { __stdbIdentity?: string }).__stdbIdentity = identity.toHexString();
+  }
+
   const me = useMemo(
     () => (identity ? sessions.find((s) => s.identity.toHexString() === identity.toHexString()) : undefined),
     [sessions, identity],

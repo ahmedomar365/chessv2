@@ -21,6 +21,8 @@ const {
   STDB_URI = 'https://maincloud.spacetimedb.com',
   STDB_DB = 'chessv2',
   STDB_OPERATOR_TOKEN,
+  RECAPTCHA_SECRET, // reCAPTCHA v3 secret key (server-side only)
+  RECAPTCHA_MIN_SCORE = '0.5',
   PORT = 8787,
 } = process.env;
 
@@ -88,7 +90,49 @@ async function grantCrowns(accountId, crowns, orderId) {
   if (!res.ok) throw new Error(`grant failed ${res.status}: ${await res.text()}`);
 }
 
+async function markHuman(identityHex) {
+  const res = await fetch(`${STDB_URI}/v1/database/${STDB_DB}/call/mark_human`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${STDB_OPERATOR_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify([identityHex]),
+  });
+  if (!res.ok) throw new Error(`mark_human failed ${res.status}: ${await res.text()}`);
+}
+
 // ---- routes ----
+
+// Verify a reCAPTCHA v3 token with Google, then bless the caller's STDB
+// identity so it may register one account. No secret ever leaves the server.
+app.post('/api/pay/recaptcha', async (req, res) => {
+  try {
+    if (!RECAPTCHA_SECRET) return res.status(503).json({ error: 'recaptcha not configured' });
+    const token = String(req.body?.token ?? '');
+    const identity = String(req.body?.identity ?? '').toLowerCase().replace(/^0x/, '');
+    if (token.length < 20 || !/^[0-9a-f]{48,72}$/.test(identity)) {
+      return res.status(400).json({ error: 'bad request' });
+    }
+    const params = new URLSearchParams({ secret: RECAPTCHA_SECRET, response: token });
+    const gr = await fetch('https://www.google.com/recaptcha/api/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: params,
+    });
+    const data = await gr.json();
+    const score = typeof data.score === 'number' ? data.score : 0;
+    if (!data.success || score < Number(RECAPTCHA_MIN_SCORE)) {
+      console.warn('recaptcha rejected', { success: data.success, score, errs: data['error-codes'] });
+      return res.status(403).json({ error: 'failed', score });
+    }
+    await markHuman(identity);
+    res.json({ ok: true, score });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'internal' });
+  }
+});
 
 app.get('/api/pay/config', (_req, res) => {
   res.json({ clientId: PAYPAL_CLIENT_ID, env: PAYPAL_ENV, packs: PACKS });

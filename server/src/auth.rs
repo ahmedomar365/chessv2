@@ -14,10 +14,13 @@ fn argon() -> Argon2<'static> {
 /// Substrings that may never appear in a username (profanity, slurs, adult /
 /// spam terms). Matched case-insensitively against a leetspeak-normalized,
 /// separator-stripped form so "p0rn", "P_O_R_N", "y0up0rn" are all caught.
-const BANNED_NAME_PARTS: [&str; 30] = [
+/// Brand/scam terms a general profanity library won't know. The robust
+/// profanity/obfuscation detection is delegated to `rustrict` below.
+const BANNED_NAME_PARTS: [&str; 36] = [
     "fuck", "shit", "bitch", "asshole", "cunt", "nigger", "nigga", "faggot", "whore", "slut",
-    "rape", "porn", "youporn", "pornhub", "xvideos", "xnxx", "xxx", "hentai", "boobs", "penis",
-    "vagina", "dick", "cock", "pussy", "nazi", "hitler", "retard", "admin", "supremacy", "kys",
+    "rape", "porn", "ponhub", "pornhub", "youporn", "xvideos", "xvideo", "xhamster", "xnxx",
+    "redtube", "brazzers", "onlyfans", "kemono", "xxx", "hentai", "boobs", "penis", "vagina",
+    "dick", "cock", "pussy", "nazi", "hitler", "retard", "supremacy", "kys",
 ];
 
 /// Collapse leetspeak and strip separators so evasions don't slip through.
@@ -48,6 +51,14 @@ pub fn validate_username(u: &str) -> Result<(), String> {
     }
     let norm = normalize_for_filter(u);
     if BANNED_NAME_PARTS.iter().any(|bad| norm.contains(bad)) {
+        return Err("That username isn't allowed — pick another".into());
+    }
+    // robust profanity/obfuscation detection (leetspeak, spacing, etc.).
+    // Require MODERATE+ severity in the sexual/profane/offensive categories so
+    // random letter+digit usernames don't trip rustrict's mild/spam heuristics.
+    let bad = (rustrict::Type::SEXUAL | rustrict::Type::PROFANE | rustrict::Type::OFFENSIVE)
+        & rustrict::Type::SEVERE;
+    if rustrict::Censor::from_str(u).analyze().is(bad) {
         return Err("That username isn't allowed — pick another".into());
     }
     Ok(())
@@ -84,9 +95,16 @@ mod tests {
         assert!(validate_username("xxxKing").is_err());
         assert!(validate_username("n1gga").is_err());
         assert!(validate_username("FuckYou").is_err());
-        // legit names still pass
+        assert!(validate_username("www_ponhub_com").is_err()); // the one that slipped through
+        assert!(validate_username("pornhub99").is_err());
+        assert!(validate_username("onlyfanslink").is_err());
+        assert!(validate_username("kemonoparty").is_err());
+        // legit names still pass (incl. numbers — no false positives)
         assert!(validate_username("Magnus").is_ok());
         assert!(validate_username("knight_rider").is_ok());
+        assert!(validate_username("player2024").is_ok());
+        assert!(validate_username("1337gamer").is_ok());
+        assert!(validate_username("Essex_Bob").is_ok());
     }
 
     #[test]
