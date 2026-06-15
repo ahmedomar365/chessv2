@@ -897,6 +897,18 @@ pub fn resign(ctx: &ReducerContext, game_id: u64) -> Result<(), String> {
     Ok(())
 }
 
+/// ADMIN ONLY: abort a live game (records a draw) — used to free a banned
+/// account that's stuck mid-game so it can be purged.
+#[reducer]
+pub fn admin_abort_game(ctx: &ReducerContext, game_id: u64) -> Result<(), String> {
+    let admin = spacetimedb::Identity::from_hex(crate::economy::ADMIN_HEX).map_err(|_| "bad admin")?;
+    if ctx.sender() != admin {
+        return Err("Forbidden".into());
+    }
+    finish_game(ctx, game_id, 3, 4);
+    Ok(())
+}
+
 #[reducer]
 pub fn offer_draw(ctx: &ReducerContext, game_id: u64) -> Result<(), String> {
     let s = logged_in(ctx)?;

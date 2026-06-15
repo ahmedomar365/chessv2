@@ -11,12 +11,44 @@ fn argon() -> Argon2<'static> {
     Argon2::new(Algorithm::Argon2id, Version::V0x13, Params::new(8192, 2, 1, None).unwrap())
 }
 
+/// Substrings that may never appear in a username (profanity, slurs, adult /
+/// spam terms). Matched case-insensitively against a leetspeak-normalized,
+/// separator-stripped form so "p0rn", "P_O_R_N", "y0up0rn" are all caught.
+const BANNED_NAME_PARTS: [&str; 30] = [
+    "fuck", "shit", "bitch", "asshole", "cunt", "nigger", "nigga", "faggot", "whore", "slut",
+    "rape", "porn", "youporn", "pornhub", "xvideos", "xnxx", "xxx", "hentai", "boobs", "penis",
+    "vagina", "dick", "cock", "pussy", "nazi", "hitler", "retard", "admin", "supremacy", "kys",
+];
+
+/// Collapse leetspeak and strip separators so evasions don't slip through.
+fn normalize_for_filter(u: &str) -> String {
+    u.chars()
+        .filter(|c| c.is_ascii_alphanumeric())
+        .map(|c| match c.to_ascii_lowercase() {
+            '0' => 'o',
+            '1' => 'i',
+            '3' => 'e',
+            '4' => 'a',
+            '5' => 's',
+            '7' => 't',
+            '8' => 'b',
+            '9' => 'g',
+            '$' => 's',
+            other => other,
+        })
+        .collect()
+}
+
 pub fn validate_username(u: &str) -> Result<(), String> {
     if u.len() < 3 || u.len() > 16 {
         return Err("Username must be 3-16 characters".into());
     }
     if !u.chars().all(|c| c.is_ascii_alphanumeric() || c == '_') {
         return Err("Username may only contain letters, numbers, and _".into());
+    }
+    let norm = normalize_for_filter(u);
+    if BANNED_NAME_PARTS.iter().any(|bad| norm.contains(bad)) {
+        return Err("That username isn't allowed — pick another".into());
     }
     Ok(())
 }
@@ -45,6 +77,16 @@ mod tests {
         assert!(validate_username("Good_Name1").is_ok());
         assert!(validate_username("abc").is_ok()); // 3 chars ok
         assert!(validate_username("a234567890123456").is_ok()); // 16 chars ok
+        // banned content (incl. leetspeak + separator evasion)
+        assert!(validate_username("youporn").is_err());
+        assert!(validate_username("y0up0rn").is_err());
+        assert!(validate_username("P_O_R_N").is_err());
+        assert!(validate_username("xxxKing").is_err());
+        assert!(validate_username("n1gga").is_err());
+        assert!(validate_username("FuckYou").is_err());
+        // legit names still pass
+        assert!(validate_username("Magnus").is_ok());
+        assert!(validate_username("knight_rider").is_ok());
     }
 
     #[test]
